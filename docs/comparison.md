@@ -117,7 +117,7 @@ aig is additive. It captures information that currently gets lost, without chang
 
 ## Recently Shipped
 
-- **Claude Code conversation capture** — `aig capture` auto-captures the AI conversation into version history
+- **AI conversation capture (Claude Code, generic JSONL import)** — `aig capture` auto-captures the AI conversation into version history
 - **Auto-capture on session end** — Conversations are preserved automatically
 - **File watching with auto-checkpoint** — `aig watch --auto-checkpoint` continuously captures file state changes
 - **`cargo install` support** — Install aig directly via Cargo

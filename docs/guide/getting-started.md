@@ -176,21 +176,22 @@ Checkpoint created
 
 Under the hood, this runs `git commit` and then writes metadata into `.aig/aig.db`. The git commit is a normal commit --- tools like `git log`, GitHub, and CI all work exactly as before.
 
-### 7. Capture Claude Code conversation
+### 7. Capture AI conversation
 
-If you are working with Claude Code, you can pull its conversation history into your session at any time:
+aig can pull AI conversation history into your session. Claude Code is auto-detected; for other tools, use `--file` to import a JSONL file:
 
 ```bash
-aig capture
+aig capture                              # auto-detects Claude Code
+aig capture --file conversation.jsonl    # import from any AI tool
 ```
 
 ```
-Captured 42 conversation entries from Claude Code
+Captured 42 conversation entries
   intent:  Add user registration endpoint
   session: e786f65dcf8b
 ```
 
-This is also done automatically when you end a session, so you do not need to run it manually unless you want to capture mid-session.
+This is also done automatically when you end a session (for auto-detected sources), so you do not need to run it manually unless you want to capture mid-session.
 
 ### 8. Continue working or end the session
 
@@ -201,7 +202,7 @@ aig session end
 ```
 
 ```
-Auto-captured 42 conversation entries from Claude Code
+Auto-captured 42 conversation entries
 Session ended
   intent:      Add user registration endpoint
   checkpoints: 2
@@ -272,7 +273,7 @@ No more guessing why a line exists. The full context --- from high-level intent 
 | `aig import` | Import existing git history (idempotent) |
 | `aig push [remote]` | Push aig metadata to remote via git notes |
 | `aig pull [remote]` | Pull aig metadata from remote via git notes |
-| `aig capture` | Import Claude Code conversation into active session |
+| `aig capture` | Capture AI conversation (auto-detects Claude Code, or use `--file`) |
 | `aig watch [--auto-checkpoint]` | Watch files for changes, optionally auto-checkpoint |
 | `aig conversation add "note"` | Add manual reasoning note to session |
 

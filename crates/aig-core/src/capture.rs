@@ -4,28 +4,74 @@ use std::path::{Path, PathBuf};
 
 use crate::db::Database;
 
-/// A parsed conversation entry from Claude Code
+/// Which AI tool to capture from.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Source {
+    Auto,          // try all known sources, pick the first match
+    ClaudeCode,    // ~/.claude/projects/
+    Generic,       // generic JSONL format (requires a file path via File variant)
+    File(PathBuf), // user-specified file path (parsed as generic JSONL)
+}
+
+/// A parsed conversation entry from an AI tool.
 #[derive(Debug)]
 pub struct ConversationEntry {
     pub role: String,    // "user" or "assistant"
     pub content: String, // the message text
 }
 
-/// Capture the current Claude Code conversation and import it into the given session.
-/// Returns the number of entries imported, or 0 if nothing was found.
-pub fn capture_conversation(db: &Database, session_id: &str) -> Result<usize> {
-    let jsonl_path = match find_conversation_file()? {
-        Some(p) => p,
-        None => return Ok(0),
-    };
-
-    let entries = parse_conversation(&jsonl_path)?;
-    if entries.is_empty() {
-        return Ok(0);
+/// Capture a conversation and import it into the given session.
+/// Returns `(count, source_name)` so the caller can print which source was used.
+pub fn capture_conversation(
+    db: &Database,
+    session_id: &str,
+    source: Source,
+) -> Result<(usize, String)> {
+    match source {
+        Source::Auto => {
+            // Try Claude Code first
+            if let Some(path) = find_claude_code_conversation()? {
+                let entries = parse_claude_code_conversation(&path)?;
+                if !entries.is_empty() {
+                    return Ok((
+                        import_entries(db, session_id, &entries)?,
+                        "Claude Code".to_string(),
+                    ));
+                }
+            }
+            // Future: try Cursor, Windsurf, etc.
+            // if let Some(path) = find_cursor_conversation()? { ... }
+            Ok((0, "none".to_string()))
+        }
+        Source::ClaudeCode => {
+            if let Some(path) = find_claude_code_conversation()? {
+                let entries = parse_claude_code_conversation(&path)?;
+                Ok((
+                    import_entries(db, session_id, &entries)?,
+                    "Claude Code".to_string(),
+                ))
+            } else {
+                Ok((0, "Claude Code".to_string()))
+            }
+        }
+        Source::Generic => {
+            // Generic requires a file path; without one, nothing to do.
+            Ok((0, "generic".to_string()))
+        }
+        Source::File(path) => {
+            let entries = parse_generic_conversation(&path)?;
+            Ok((
+                import_entries(db, session_id, &entries)?,
+                format!("file {}", path.display()),
+            ))
+        }
     }
+}
 
+/// Import parsed conversation entries into the database. Returns count of entries imported.
+fn import_entries(db: &Database, session_id: &str, entries: &[ConversationEntry]) -> Result<usize> {
     let mut count = 0usize;
-    for entry in &entries {
+    for entry in entries {
         let prefix = if entry.role == "user" {
             "[User]"
         } else {
@@ -57,8 +103,13 @@ pub fn capture_conversation(db: &Database, session_id: &str) -> Result<usize> {
     Ok(count)
 }
 
-/// Find the most recently modified .jsonl conversation file for the current project.
-fn find_conversation_file() -> Result<Option<PathBuf>> {
+// ---------------------------------------------------------------------------
+// Claude Code source
+// ---------------------------------------------------------------------------
+
+/// Find the most recently modified .jsonl conversation file for the current project
+/// in Claude Code's `~/.claude/projects/` directory.
+fn find_claude_code_conversation() -> Result<Option<PathBuf>> {
     let cwd = std::env::current_dir()?;
     let cwd_str = cwd.to_string_lossy().to_string();
 
@@ -153,7 +204,7 @@ fn find_most_recent_jsonl(dir: &Path) -> Result<Option<PathBuf>> {
 }
 
 /// Parse a Claude Code .jsonl conversation file into meaningful entries.
-fn parse_conversation(path: &Path) -> Result<Vec<ConversationEntry>> {
+fn parse_claude_code_conversation(path: &Path) -> Result<Vec<ConversationEntry>> {
     let content = std::fs::read_to_string(path)?;
     let mut entries = Vec::new();
 
@@ -215,6 +266,54 @@ fn parse_conversation(path: &Path) -> Result<Vec<ConversationEntry>> {
 
     Ok(entries)
 }
+
+// ---------------------------------------------------------------------------
+// Generic JSONL source
+// ---------------------------------------------------------------------------
+
+/// Parse a generic JSONL conversation file where each line is:
+/// `{"role": "user", "content": "the message text"}`
+/// `{"role": "assistant", "content": "the response text"}`
+fn parse_generic_conversation(path: &Path) -> Result<Vec<ConversationEntry>> {
+    let content = std::fs::read_to_string(path)?;
+    let mut entries = Vec::new();
+
+    for line in content.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        let obj: Value = match serde_json::from_str(line) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        let role = match obj.get("role").and_then(|v| v.as_str()) {
+            Some(r) if r == "user" || r == "assistant" => r.to_string(),
+            _ => continue,
+        };
+
+        let content_text = match obj.get("content").and_then(|v| v.as_str()) {
+            Some(c) if !c.trim().is_empty() => c.trim().to_string(),
+            _ => continue,
+        };
+
+        // Truncate to ~200 chars
+        let truncated = truncate(&content_text, 200);
+
+        entries.push(ConversationEntry {
+            role,
+            content: truncated,
+        });
+    }
+
+    Ok(entries)
+}
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
 
 /// Extract text content from a message object.
 /// Content can be a string or an array of content blocks.
@@ -411,5 +510,30 @@ mod tests {
             "<system-reminder>\nsome system stuff\n</system-reminder>\nActual user message here";
         let cleaned = clean_message(input);
         assert_eq!(cleaned, "Actual user message here");
+    }
+
+    #[test]
+    fn test_parse_generic_conversation() {
+        let dir = std::env::temp_dir();
+        let path = dir.join("test_generic_conv.jsonl");
+        std::fs::write(
+            &path,
+            r#"{"role": "user", "content": "Hello, can you help me?"}
+{"role": "assistant", "content": "Of course! What do you need?"}
+{"role": "system", "content": "ignored"}
+{"invalid json
+{"role": "user", "content": "  "}
+"#,
+        )
+        .unwrap();
+
+        let entries = parse_generic_conversation(&path).unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].role, "user");
+        assert_eq!(entries[0].content, "Hello, can you help me?");
+        assert_eq!(entries[1].role, "assistant");
+        assert_eq!(entries[1].content, "Of course! What do you need?");
+
+        std::fs::remove_file(&path).ok();
     }
 }

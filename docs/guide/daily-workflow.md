@@ -69,7 +69,7 @@ aig conversation add "Chose connection pooling over retry logic — lower latenc
 aig session end
 ```
 
-This auto-captures your Claude Code conversation (if you used it) and closes the intent. Then push:
+This auto-captures your AI conversation (Claude Code is auto-detected; for other tools, run `aig capture --file` before ending) and closes the intent. Then push:
 
 ```bash
 git push            # pushes the git commits
@@ -92,14 +92,14 @@ aig log             # full intent history
 1. **You** start the session and declare the intent
 2. **The AI** writes code — it doesn't need to know about aig
 3. **You** checkpoint when ready — aig analyzes what the AI changed semantically
-4. **aig** auto-captures the Claude Code conversation on session end
+4. **aig** auto-captures AI conversations on session end (Claude Code auto-detected, others via `--file`)
 
 The AI doesn't run aig commands. You do. aig is the wrapper around your AI-assisted workflow, not something the AI integrates with.
 
 ### What gets captured automatically?
 
 - **Semantic changes** — every checkpoint analyzes what functions/classes were added, removed, or modified
-- **Claude Code conversations** — auto-captured on `aig session end` or manually with `aig capture`
+- **AI conversations** — Claude Code auto-captured on `aig session end`; other tools via `aig capture --file` (JSONL format: one JSON object per line with `role` and `content` fields)
 - **Git metadata** — commit SHA, timestamp, author
 
 ### What you add manually (optional but valuable)

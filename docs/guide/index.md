@@ -120,9 +120,9 @@ $ aig diff --semantic
 
 Four lines that tell you what actually changed in the code's structure.
 
-## Auto-capture from Claude Code
+## Auto-capture AI conversations
 
-If you use Claude Code, aig can automatically import the conversation that produced your changes. Run `aig capture` during a session, or let it happen automatically when you end a session with `aig session end`. The entire human-AI dialogue becomes part of your version history — no manual notes needed.
+aig can automatically capture the conversation that produced your changes. Claude Code is auto-detected — run `aig capture` during a session, or let it happen automatically when you end a session with `aig session end`. For any other AI tool, use `aig capture --file conversation.jsonl` to import a conversation in the generic JSONL format (one JSON object per line with `role` and `content` fields). The entire human-AI dialogue becomes part of your version history — no manual notes needed.
 
 ## File watching
 
@@ -130,7 +130,7 @@ Run `aig watch --auto-checkpoint` to have aig monitor your working directory and
 
 ## Current status
 
-aig ships 16 commands, semantic diff for 8 languages, Claude Code integration, file watching, remote sync via git notes, and git import with incremental updates. Built in Rust + TypeScript, runs on Linux, macOS, and Windows.
+aig ships 16 commands, semantic diff for 8 languages, AI conversation capture (Claude Code auto-detected, generic JSONL import for any tool), file watching, remote sync via git notes, and git import with incremental updates. Built in Rust + TypeScript, runs on Linux, macOS, and Windows.
 
 ```bash
 cargo install --git https://github.com/saschb2b/ai-git.git aig-core

@@ -89,7 +89,7 @@ If some team members use aig and others don't:
 
 ## What the Import Does NOT Do
 
-- **It cannot recover original conversations.** The reasoning behind past commits is lost. Going forward, conversations are captured automatically from Claude Code (`aig capture`, or auto-captured on `aig session end`), or manually via `aig conversation add`.
+- **It cannot recover original conversations.** The reasoning behind past commits is lost. Going forward, conversations are captured automatically from supported AI tools (Claude Code is auto-detected, or any tool via `aig capture --file`), or manually via `aig conversation add`.
 - **Intent inference from commit messages is best-effort.** Terse commit messages produce terse intents. A commit message like `"fix"` will result in an intent called `"fix"` --- there is no magic.
 - **Commits that lack context in their messages will have less meaningful intent descriptions.** The import can only work with what the git log provides.
 - **The import does not modify any git history.** It only creates `.aig/` metadata. No commits are rewritten, rebased, or amended.
@@ -107,7 +107,7 @@ aig conversation add "Using Stripe API v3, webhook-based confirmation"
 aig checkpoint "Stripe webhook handler implemented"
 aig checkpoint "Payment confirmation flow working"
 
-# End the session — auto-captures Claude Code conversation
+# End the session — auto-captures AI conversation
 aig session end
 
 # Or run file watching for hands-free checkpointing

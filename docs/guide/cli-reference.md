@@ -26,7 +26,7 @@ Commands:
   import        Import existing git history into aig
   conversation  Manage conversation records
   watch         Watch for file changes and auto-checkpoint
-  capture       Capture the current Claude Code conversation into the active session
+  capture       Capture AI conversation into the active session
   push          Push aig metadata to remote via git notes
   pull          Pull aig metadata from remote via git notes
   review        Review an intent — show summary, semantic changes, and conversation
@@ -167,12 +167,14 @@ Options:
 ### `aig capture`
 
 ```
-Capture the current Claude Code conversation into the active session
+Capture AI conversation into the active session
 
-Usage: aig capture
+Usage: aig capture [OPTIONS]
 
 Options:
-  -h, --help  Print help
+      --source <SOURCE>  Source to capture from: auto (default), claude-code, or a file path [default: auto]
+      --file <FILE>      Import conversation from a file (JSONL with role/content per line)
+  -h, --help             Print help
 ```
 
 ### `aig session start`

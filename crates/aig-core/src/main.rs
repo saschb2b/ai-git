@@ -61,8 +61,15 @@ enum Commands {
         #[arg(long)]
         auto_checkpoint: bool,
     },
-    /// Capture the current Claude Code conversation into the active session
-    Capture,
+    /// Capture AI conversation into the active session
+    Capture {
+        /// Source to capture from: auto (default), claude-code, or a file path
+        #[arg(long, default_value = "auto")]
+        source: String,
+        /// Import conversation from a file (JSONL with role/content per line)
+        #[arg(long)]
+        file: Option<String>,
+    },
     /// Push aig metadata to remote via git notes
     Push {
         /// Remote name (default: origin)
@@ -123,7 +130,7 @@ fn main() {
             ConversationAction::Add { message } => cmd_conversation_add(&message),
         },
         Commands::Watch { auto_checkpoint } => cmd_watch(auto_checkpoint),
-        Commands::Capture => cmd_capture(),
+        Commands::Capture { source, file } => cmd_capture(&source, file.as_deref()),
         Commands::Push { remote } => cmd_push(&remote),
         Commands::Pull { remote } => cmd_pull(&remote),
         Commands::Review { intent_id } => cmd_review(intent_id.as_deref()),
@@ -212,11 +219,12 @@ fn cmd_session_end() -> anyhow::Result<()> {
         rusqlite::params![now, session.intent_id],
     )?;
 
-    // Auto-capture Claude Code conversation before ending the session
-    match aig_core::capture::capture_conversation(&db, &session.id) {
-        Ok(0) => {} // No conversation found, silently skip
-        Ok(count) => {
-            println!("Auto-captured {count} conversation entries from Claude Code");
+    // Auto-capture AI conversation before ending the session
+    match aig_core::capture::capture_conversation(&db, &session.id, aig_core::capture::Source::Auto)
+    {
+        Ok((0, _)) => {} // No conversation found, silently skip
+        Ok((count, source_name)) => {
+            println!("Auto-captured {count} conversation entries from {source_name}");
         }
         Err(_) => {} // Silently skip capture errors
     }
@@ -767,7 +775,7 @@ fn cmd_watch(auto_checkpoint: bool) -> anyhow::Result<()> {
     aig_core::watch::watch_directory(".", auto_checkpoint)
 }
 
-fn cmd_capture() -> anyhow::Result<()> {
+fn cmd_capture(source_arg: &str, file_arg: Option<&str>) -> anyhow::Result<()> {
     ensure_aig_initialized()?;
     let db = Database::new()?;
 
@@ -777,18 +785,30 @@ fn cmd_capture() -> anyhow::Result<()> {
 
     let intent_obj = intent::get_intent(&db, &session.intent_id)?;
 
-    match aig_core::capture::capture_conversation(&db, &session.id) {
-        Ok(0) => {
-            println!("No Claude Code conversation found for this project.");
-            println!("Make sure Claude Code is running in this directory.");
+    let source = if let Some(path) = file_arg {
+        aig_core::capture::Source::File(std::path::PathBuf::from(path))
+    } else {
+        match source_arg {
+            "claude-code" => aig_core::capture::Source::ClaudeCode,
+            "auto" => aig_core::capture::Source::Auto,
+            other => {
+                // Treat unknown source values as file paths for convenience
+                aig_core::capture::Source::File(std::path::PathBuf::from(other))
+            }
         }
-        Ok(count) => {
-            println!("Captured {count} conversation entries from Claude Code");
+    };
+
+    match aig_core::capture::capture_conversation(&db, &session.id, source) {
+        Ok((0, _)) => {
+            println!("No AI conversation found. Try --file to import manually.");
+        }
+        Ok((count, source_name)) => {
+            println!("Captured {count} conversation entries from {source_name}");
             println!("  intent:  {}", intent_obj.description);
             println!("  session: {}", &session.id[..12]);
         }
         Err(e) => {
-            println!("Could not capture Claude Code conversation: {e}");
+            println!("Could not capture conversation: {e}");
         }
     }
 

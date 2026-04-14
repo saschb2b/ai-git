@@ -23,7 +23,7 @@ features:
     details: "See 'function authenticate() added' instead of 300 lines of red and green. Supports TypeScript, Python, Rust, Go, Java, C#, C++, and Ruby."
   - icon: "\U0001F4AC"
     title: AI Conversations Auto-Captured
-    details: "Claude Code conversations are saved into your version history automatically. The reasoning behind AI-generated code is never lost."
+    details: "AI conversations are auto-captured into your version history. Supports Claude Code out of the box, with a generic import format for any AI tool."
   - icon: "\U0001F4E6"
     title: Works With Your Existing Repo
     details: "Run 'aig import' in any git repo to build an intent graph from your commit history. Non-destructive — your git history is untouched."
