@@ -5,6 +5,7 @@ pub mod diff;
 pub mod git_interop;
 pub mod import;
 pub mod intent;
+pub mod repair;
 pub mod session;
 pub mod storage;
 pub mod sync;

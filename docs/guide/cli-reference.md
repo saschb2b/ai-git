@@ -30,6 +30,7 @@ Commands:
   push          Push aig metadata to remote via git notes
   pull          Pull aig metadata from remote via git notes
   review        Review an intent — show summary, semantic changes, and conversation
+  repair        Repair aig metadata after rebase (re-attaches orphaned notes)
   help          Print this message or the help of the given subcommand(s)
 
 Options:

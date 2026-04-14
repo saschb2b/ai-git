@@ -142,6 +142,67 @@ aig push                              # pushes notes for this branch's commits
 
 The PR diff on GitHub is a normal diff. But anyone with aig can run `aig review` locally to get the intent-level summary instead of reading raw diffs.
 
+## Branches, Merging, Rebase, Cherry-Pick
+
+### Branches
+
+**Work exactly as before.** Create branches, switch between them, merge them. aig sessions are not tied to a specific branch — a session tracks an intent across whatever branch you're on.
+
+```bash
+git checkout -b feature/payments
+aig session start "Add Stripe payment flow"
+# work, checkpoint...
+git checkout main
+# session is still active — you can resume on any branch
+git checkout feature/payments
+aig checkpoint "Payment webhook handler done"
+```
+
+### Merging
+
+**Works fine.** Merge commits are normal git commits. They don't have aig metadata, but that's expected — the intent context lives on the feature branch commits that are being merged in.
+
+```bash
+git checkout main
+git merge feature/payments
+aig push    # push the notes from the feature branch commits
+```
+
+### Rebase — Handle With Care
+
+**Rebase rewrites commit SHAs.** Since aig metadata (git notes) is attached to specific SHAs, a rebase orphans those notes. The intent history still exists in the `.aig/` database, but the git notes point to commits that no longer exist.
+
+**Fix it with `aig repair`:**
+
+```bash
+git rebase main                 # SHAs change
+aig repair                      # re-attaches orphaned notes to the new commits
+aig push --force                # push the repaired notes (or: git push origin refs/notes/aig --force)
+```
+
+`aig repair` matches orphaned notes to new commits by comparing commit messages. It updates both the database and the git notes.
+
+**Recommendation:** If you use rebase, always run `aig repair` immediately after.
+
+### Cherry-Pick
+
+**Same issue as rebase** — cherry-pick creates a new commit with a new SHA. The aig metadata from the original commit doesn't follow automatically.
+
+```bash
+git cherry-pick abc1234         # creates a new commit with new SHA
+aig repair                      # finds the orphaned note and re-attaches it
+```
+
+### Interactive Rebase (squash, fixup, reorder)
+
+When you squash commits during interactive rebase, multiple aig checkpoints merge into one git commit. After the squash:
+
+- Run `aig repair` to re-attach what it can match
+- Notes from squashed-away commits may become orphaned (the commit messages changed)
+- The `.aig/` database still has the full checkpoint history — it's just the git notes that need repair
+
+**Bottom line:** Branches and merging work seamlessly. Rebase and cherry-pick require `aig repair` afterward. This is a fundamental limitation of layering on git notes — SHA-rewriting operations break the link. The roadmap includes a more robust solution via content-based matching rather than SHA-based.
+
 ## What About `git commit`?
 
 You can still use `git commit` directly. Those commits won't have aig metadata (no intent, no semantic analysis, no conversation capture), but they won't break anything. They're just "untracked" from aig's perspective.
@@ -176,4 +237,5 @@ Press Ctrl+C to stop watching, then `aig session end` when done.
 | Understand a line | `aig why file:line` |
 | Review recent work | `aig review` |
 | Import non-aig commits | `aig import` |
+| After rebase/cherry-pick | `aig repair` |
 | Hands-free mode | `aig watch --auto-checkpoint` |

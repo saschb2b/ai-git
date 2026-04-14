@@ -80,6 +80,8 @@ enum Commands {
         /// Intent ID (first 8 chars). Omit to review the most recent intent.
         intent_id: Option<String>,
     },
+    /// Repair aig metadata after rebase (re-attaches orphaned notes)
+    Repair,
 }
 
 #[derive(Subcommand)]
@@ -125,6 +127,7 @@ fn main() {
         Commands::Push { remote } => cmd_push(&remote),
         Commands::Pull { remote } => cmd_pull(&remote),
         Commands::Review { intent_id } => cmd_review(intent_id.as_deref()),
+        Commands::Repair => cmd_repair(),
     };
 
     if let Err(e) = result {
@@ -952,6 +955,23 @@ fn cmd_review(intent_id: Option<&str>) -> anyhow::Result<()> {
         }
     }
 
+    Ok(())
+}
+
+fn cmd_repair() -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+    let db = Database::new()?;
+    let repo = git_interop::open_repo(".")?;
+
+    println!("Scanning for orphaned notes...");
+    let result = aig_core::repair::repair_notes(&db, &repo)?;
+
+    println!("Repair complete:");
+    println!("  ok:       {} notes still valid", result.ok);
+    println!("  repaired: {} notes re-attached", result.repaired);
+    if result.orphaned > 0 {
+        println!("  orphaned: {} notes could not be matched", result.orphaned);
+    }
     Ok(())
 }
 
