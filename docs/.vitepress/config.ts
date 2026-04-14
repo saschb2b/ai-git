@@ -18,6 +18,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/' },
       { text: 'Comparison', link: '/comparison' },
+      { text: 'Roadmap', link: '/roadmap' },
       { text: 'Research', link: '/research' },
       {
         text: 'GitHub',
@@ -44,6 +45,7 @@ export default defineConfig({
       {
         text: 'Deep Dive',
         items: [
+          { text: 'Roadmap', link: '/roadmap' },
           { text: 'Research & Vision', link: '/research' },
           { text: 'Tech Stack', link: '/tech-stack' },
         ]

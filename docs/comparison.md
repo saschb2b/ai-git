@@ -117,13 +117,6 @@ aig is additive. It captures information that currently gets lost, without chang
 - **File watching with auto-checkpoint** — `aig watch --auto-checkpoint` continuously captures file state changes
 - **`cargo install` support** — Install aig directly via Cargo
 
-## What's Coming (Roadmap)
+## What's Coming
 
-These are planned but not yet built. No promises on timelines.
-
-- **Semantic merge engine** — AST-level conflict resolution that understands code structure, not just text
-- **Trust scoring and provenance tracking** — Track confidence levels and origin of AI-generated code
-- **TUI review interface** — Terminal-based multi-layer review experience
-- **Web UI** — Team-level intent browsing and review for larger teams
-- **Remote sync of aig metadata** — Sync enriched context across machines via git notes
-- **Multi-agent coordination** — Track and attribute work across multiple AI agents operating on the same codebase
+Next up: remote sync via git notes, semantic merge engine, trust scoring, TUI review interface, and more. See the full [Roadmap](/roadmap) for the path from MVP to git-equivalent ecosystem.
