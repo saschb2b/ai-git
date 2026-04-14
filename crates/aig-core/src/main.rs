@@ -10,7 +10,10 @@ use aig_core::session::SessionManager;
 use aig_core::storage::BlobStore;
 
 #[derive(Parser)]
-#[command(name = "aig", about = "AI-native version control for intent-driven development")]
+#[command(
+    name = "aig",
+    about = "AI-native version control for intent-driven development"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -197,17 +200,22 @@ fn cmd_checkpoint(message: &str) -> anyhow::Result<()> {
     ensure_aig_initialized()?;
     let db = Database::new()?;
 
-    let session = SessionManager::get_active_session(&db)?
-        .ok_or_else(|| anyhow::anyhow!("no active session — start one with: aig session start \"intent\""))?;
+    let session = SessionManager::get_active_session(&db)?.ok_or_else(|| {
+        anyhow::anyhow!("no active session — start one with: aig session start \"intent\"")
+    })?;
 
     let intent_obj = intent::get_intent(&db, &session.intent_id)?;
 
     // Create a git commit
     let repo = git_interop::open_repo(".")?;
-    let git_sha = git_interop::create_commit(&repo, &format!("{}\n\naig intent: {}", message, intent_obj.description))?;
+    let git_sha = git_interop::create_commit(
+        &repo,
+        &format!("{}\n\naig intent: {}", message, intent_obj.description),
+    )?;
 
     // Record the checkpoint in aig (also stores semantic changes via tree-sitter)
-    let checkpoint_id = CheckpointManager::create_checkpoint(&db, &session.id, message, &git_sha, &repo)?;
+    let checkpoint_id =
+        CheckpointManager::create_checkpoint(&db, &session.id, message, &git_sha, &repo)?;
 
     let short_sha = &git_sha[..8];
     let short_id = &checkpoint_id[..12];
@@ -216,18 +224,24 @@ fn cmd_checkpoint(message: &str) -> anyhow::Result<()> {
     let mut sc_stmt = db.conn.prepare(
         "SELECT file_path, change_type, symbol_name FROM semantic_changes WHERE checkpoint_id = ?1",
     )?;
-    let sem_changes: Vec<_> = sc_stmt.query_map(rusqlite::params![checkpoint_id], |row| {
-        Ok((
-            row.get::<_, String>(0)?,
-            row.get::<_, String>(1)?,
-            row.get::<_, String>(2)?,
-        ))
-    })?.collect::<Result<Vec<_>, _>>()?;
+    let sem_changes: Vec<_> = sc_stmt
+        .query_map(rusqlite::params![checkpoint_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
 
     if !sem_changes.is_empty() {
         println!("  semantic:");
         for (file, change_type, symbol) in &sem_changes {
-            println!("    {} {} {symbol} ({file})", change_type_icon(change_type), change_type);
+            println!(
+                "    {} {} {symbol} ({file})",
+                change_type_icon(change_type),
+                change_type
+            );
         }
     }
 
@@ -280,16 +294,12 @@ fn cmd_status() -> anyhow::Result<()> {
         }
         None => {
             // Show summary even without active session
-            let intent_count: i64 = db.conn.query_row(
-                "SELECT COUNT(*) FROM intents",
-                [],
-                |row| row.get(0),
-            )?;
-            let checkpoint_count: i64 = db.conn.query_row(
-                "SELECT COUNT(*) FROM checkpoints",
-                [],
-                |row| row.get(0),
-            )?;
+            let intent_count: i64 =
+                db.conn
+                    .query_row("SELECT COUNT(*) FROM intents", [], |row| row.get(0))?;
+            let checkpoint_count: i64 =
+                db.conn
+                    .query_row("SELECT COUNT(*) FROM checkpoints", [], |row| row.get(0))?;
 
             println!("No active session");
             println!("  total intents:     {intent_count}");
@@ -331,7 +341,10 @@ fn cmd_log() -> anyhow::Result<()> {
         };
 
         println!("[{short_id}] {} ({status})", intent_obj.description);
-        println!("         {checkpoint_count} checkpoint(s) | {}", intent_obj.created_at);
+        println!(
+            "         {checkpoint_count} checkpoint(s) | {}",
+            intent_obj.created_at
+        );
 
         // Show checkpoint messages
         let mut stmt = db.conn.prepare(
@@ -360,15 +373,21 @@ fn cmd_log() -> anyhow::Result<()> {
                 let mut sc_stmt = db.conn.prepare(
                     "SELECT change_type, symbol_name, file_path FROM semantic_changes WHERE checkpoint_id = ?1",
                 )?;
-                let scs: Vec<_> = sc_stmt.query_map(rusqlite::params![cp_id], |row| {
-                    Ok((
-                        row.get::<_, String>(0)?,
-                        row.get::<_, String>(1)?,
-                        row.get::<_, String>(2)?,
-                    ))
-                })?.collect::<Result<Vec<_>, _>>()?;
+                let scs: Vec<_> = sc_stmt
+                    .query_map(rusqlite::params![cp_id], |row| {
+                        Ok((
+                            row.get::<_, String>(0)?,
+                            row.get::<_, String>(1)?,
+                            row.get::<_, String>(2)?,
+                        ))
+                    })?
+                    .collect::<Result<Vec<_>, _>>()?;
                 for (ct, sym, fp) in &scs {
-                    println!("                     {} {} `{sym}` ({fp})", change_type_icon(ct), ct);
+                    println!(
+                        "                     {} {} `{sym}` ({fp})",
+                        change_type_icon(ct),
+                        ct
+                    );
                 }
             }
         }
@@ -394,8 +413,14 @@ fn cmd_diff(semantic: bool) -> anyhow::Result<()> {
         for change in &changes {
             let lang = aig_treesitter::detect_language(&change.path);
             if lang == aig_treesitter::Language::Unknown {
-                println!("--- {} (no semantic diff for this file type, showing line diff)", change.path);
-                print!("{}", diff::line_diff(&change.old_content, &change.new_content));
+                println!(
+                    "--- {} (no semantic diff for this file type, showing line diff)",
+                    change.path
+                );
+                print!(
+                    "{}",
+                    diff::line_diff(&change.old_content, &change.new_content)
+                );
                 println!();
                 continue;
             }
@@ -414,7 +439,13 @@ fn cmd_diff(semantic: bool) -> anyhow::Result<()> {
                         } else {
                             format!(" — {}", sc.details)
                         };
-                        println!("  {} {}{}{}", change_type_icon(&sc.change_type), sc.change_type, symbol, details);
+                        println!(
+                            "  {} {}{}{}",
+                            change_type_icon(&sc.change_type),
+                            sc.change_type,
+                            symbol,
+                            details
+                        );
                     }
                     println!();
                 }
@@ -423,8 +454,14 @@ fn cmd_diff(semantic: bool) -> anyhow::Result<()> {
                     println!();
                 }
                 Err(_) => {
-                    println!("--- {} (semantic diff failed, showing line diff)", change.path);
-                    print!("{}", diff::line_diff(&change.old_content, &change.new_content));
+                    println!(
+                        "--- {} (semantic diff failed, showing line diff)",
+                        change.path
+                    );
+                    print!(
+                        "{}",
+                        diff::line_diff(&change.old_content, &change.new_content)
+                    );
                     println!();
                 }
             }
@@ -433,7 +470,10 @@ fn cmd_diff(semantic: bool) -> anyhow::Result<()> {
         // Line-based diff
         for change in &changes {
             println!("--- {}", change.path);
-            print!("{}", diff::line_diff(&change.old_content, &change.new_content));
+            print!(
+                "{}",
+                diff::line_diff(&change.old_content, &change.new_content)
+            );
             println!();
         }
     }
@@ -474,16 +514,18 @@ fn cmd_why(location: &str) -> anyhow::Result<()> {
          ORDER BY c.created_at DESC",
     )?;
 
-    let rows: Vec<_> = stmt.query_map([], |row| {
-        Ok((
-            row.get::<_, String>(0)?,
-            row.get::<_, String>(1)?,
-            row.get::<_, String>(2)?,
-            row.get::<_, String>(3)?,
-            row.get::<_, String>(4)?,
-            row.get::<_, String>(5)?,
-        ))
-    })?.collect::<Result<Vec<_>, _>>()?;
+    let rows: Vec<_> = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, String>(5)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
 
     // Find the most recent checkpoint whose git commit touched this file
     for (_cp_id, cp_msg, git_sha, cp_time, intent_desc, intent_id) in &rows {
@@ -524,21 +566,26 @@ fn cmd_why(location: &str) -> anyhow::Result<()> {
                 "SELECT change_type, symbol_name, details FROM semantic_changes
                  WHERE checkpoint_id = ?1 AND file_path = ?2",
             )?;
-            let sem_changes: Vec<_> = sc_stmt.query_map(
-                rusqlite::params![_cp_id, file_path],
-                |row| Ok((
-                    row.get::<_, String>(0)?,
-                    row.get::<_, String>(1)?,
-                    row.get::<_, String>(2)?,
-                ))
-            )?.collect::<Result<Vec<_>, _>>()?;
+            let sem_changes: Vec<_> = sc_stmt
+                .query_map(rusqlite::params![_cp_id, file_path], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                    ))
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
 
             if !sem_changes.is_empty() {
                 println!();
                 println!("  Semantic changes:");
                 for (change_type, symbol, details) in &sem_changes {
                     let icon = change_type_icon(change_type);
-                    let detail_str = if details.is_empty() { String::new() } else { format!(" — {details}") };
+                    let detail_str = if details.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" — {details}")
+                    };
                     println!("    {icon} {change_type} `{symbol}`{detail_str}");
                 }
             }
@@ -594,12 +641,17 @@ fn cmd_conversation_add(message: &str) -> anyhow::Result<()> {
     ensure_aig_initialized()?;
     let db = Database::new()?;
 
-    let session = SessionManager::get_active_session(&db)?
-        .ok_or_else(|| anyhow::anyhow!("no active session — start one with: aig session start \"intent\""))?;
+    let session = SessionManager::get_active_session(&db)?.ok_or_else(|| {
+        anyhow::anyhow!("no active session — start one with: aig session start \"intent\"")
+    })?;
 
     // Generate an id for the conversation entry
     let now = chrono::Utc::now();
-    let id_input = format!("conv-{}-{}", message, now.timestamp_nanos_opt().unwrap_or(0));
+    let id_input = format!(
+        "conv-{}-{}",
+        message,
+        now.timestamp_nanos_opt().unwrap_or(0)
+    );
     let id = {
         use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();

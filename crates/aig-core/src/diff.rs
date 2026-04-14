@@ -77,10 +77,7 @@ fn lcs_table(a: &[&str], b: &[&str]) -> Vec<Vec<usize>> {
 pub fn get_working_changes(repo: &git2::Repository) -> Result<Vec<ChangedFile>> {
     let mut changed = Vec::new();
 
-    let head_tree = repo
-        .head()
-        .ok()
-        .and_then(|h| h.peel_to_tree().ok());
+    let head_tree = repo.head().ok().and_then(|h| h.peel_to_tree().ok());
 
     let diff = repo.diff_tree_to_workdir_with_index(
         head_tree.as_ref(),

@@ -157,13 +157,9 @@ pub fn get_commit_diff_stats(
             .unwrap_or_else(|| "<unknown>".to_string());
 
         // Use the patch to count insertions / deletions for this file.
-        if let Ok(patch) =
-            git2::Patch::from_diff(&diff, idx)
-        {
-            if let Some(patch) = patch {
-                let (_, additions, deletions) = patch.line_stats().unwrap_or((0, 0, 0));
-                result.push(format!("{}: +{} -{}", path, additions, deletions));
-            }
+        if let Ok(Some(patch)) = git2::Patch::from_diff(&diff, idx) {
+            let (_, additions, deletions) = patch.line_stats().unwrap_or((0, 0, 0));
+            result.push(format!("{}: +{} -{}", path, additions, deletions));
         }
     }
 
@@ -234,19 +230,19 @@ pub fn import_git_history(repo_path: &str) -> Result<()> {
         // Determine intent + summary: LLM path or heuristic fallback
         let (final_intent, final_summary) = if let Some(ref mut client) = ipc_client {
             // Gather commit messages and diff stats for the LLM
-            let messages: Vec<String> = cluster
-                .commits
-                .iter()
-                .map(|c| c.message.clone())
-                .collect();
+            let messages: Vec<String> = cluster.commits.iter().map(|c| c.message.clone()).collect();
 
             let diff_stats: Vec<String> = cluster
                 .commits
                 .iter()
                 .flat_map(|c| {
                     // Look up the actual git2 commit to compute diff stats
-                    match repo.find_commit(git2::Oid::from_str(&c.sha).unwrap_or_else(|_| git2::Oid::zero())) {
-                        Ok(git_commit) => get_commit_diff_stats(&repo, &git_commit).unwrap_or_default(),
+                    match repo.find_commit(
+                        git2::Oid::from_str(&c.sha).unwrap_or_else(|_| git2::Oid::zero()),
+                    ) {
+                        Ok(git_commit) => {
+                            get_commit_diff_stats(&repo, &git_commit).unwrap_or_default()
+                        }
                         Err(_) => Vec::new(),
                     }
                 })
@@ -260,17 +256,11 @@ pub fn import_git_history(repo_path: &str) -> Result<()> {
                         i + 1,
                         e
                     );
-                    (
-                        cluster.inferred_intent.clone(),
-                        cluster.summary.clone(),
-                    )
+                    (cluster.inferred_intent.clone(), cluster.summary.clone())
                 }
             }
         } else {
-            (
-                cluster.inferred_intent.clone(),
-                cluster.summary.clone(),
-            )
+            (cluster.inferred_intent.clone(), cluster.summary.clone())
         };
 
         println!(

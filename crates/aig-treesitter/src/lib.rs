@@ -168,10 +168,7 @@ fn collect_definitions(
 
         if let Some(&semantic_kind) = kind_map.get(node_kind) {
             if let Some(name) = extract_node_name(&child, source) {
-                let text = child
-                    .utf8_text(source)
-                    .unwrap_or("")
-                    .to_string();
+                let text = child.utf8_text(source).unwrap_or("").to_string();
                 out.push(Definition {
                     kind: semantic_kind.to_string(),
                     name,

@@ -1,8 +1,8 @@
-pub mod db;
-pub mod storage;
-pub mod session;
 pub mod checkpoint;
-pub mod intent;
-pub mod git_interop;
+pub mod db;
 pub mod diff;
+pub mod git_interop;
 pub mod import;
+pub mod intent;
+pub mod session;
+pub mod storage;

@@ -60,11 +60,7 @@ fn record_semantic_changes(
         None
     };
 
-    let diff = repo.diff_tree_to_tree(
-        parent_tree.as_ref(),
-        Some(&commit_tree),
-        None,
-    )?;
+    let diff = repo.diff_tree_to_tree(parent_tree.as_ref(), Some(&commit_tree), None)?;
 
     for delta in diff.deltas() {
         let file_path = match delta.new_file().path() {

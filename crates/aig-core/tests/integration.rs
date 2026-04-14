@@ -196,7 +196,8 @@ fn test_line_diff() {
 #[test]
 fn test_semantic_diff_python() {
     let old = "def greet(name):\n    return f\"Hello {name}\"\n\ndef farewell():\n    pass";
-    let new = "def greet(name, formal=False):\n    return f\"Hello {name}\"\n\ndef welcome():\n    pass";
+    let new =
+        "def greet(name, formal=False):\n    return f\"Hello {name}\"\n\ndef welcome():\n    pass";
 
     let changes =
         aig_treesitter::semantic_diff(old, new, aig_treesitter::Language::Python).unwrap();
@@ -260,8 +261,7 @@ fn test_semantic_diff_rust() {
     let new =
         "fn hello() { println!(\"hi\"); }\nstruct User { name: String, age: u32 }\nfn goodbye() {}";
 
-    let changes =
-        aig_treesitter::semantic_diff(old, new, aig_treesitter::Language::Rust).unwrap();
+    let changes = aig_treesitter::semantic_diff(old, new, aig_treesitter::Language::Rust).unwrap();
 
     let hello_change = changes.iter().find(|c| c.symbol_name == "hello");
     assert!(
@@ -369,7 +369,10 @@ fn test_blob_store() {
 
     // Store same data again -- should produce the same hash (content-addressable)
     let hash2 = store.store_blob(data).unwrap();
-    assert_eq!(hash, hash2, "storing identical data should yield the same hash");
+    assert_eq!(
+        hash, hash2,
+        "storing identical data should yield the same hash"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -404,7 +407,9 @@ fn test_conversation_storage() {
     // Query them back
     let mut stmt = db
         .conn
-        .prepare("SELECT id, session_id, message FROM conversations WHERE session_id = ?1 ORDER BY id")
+        .prepare(
+            "SELECT id, session_id, message FROM conversations WHERE session_id = ?1 ORDER BY id",
+        )
         .unwrap();
     let rows: Vec<(String, String, String)> = stmt
         .query_map(rusqlite::params![session_id], |row| {
