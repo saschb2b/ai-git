@@ -9,6 +9,7 @@ use aig_core::import::cluster_commits;
 use aig_core::intent;
 use aig_core::session::SessionManager;
 use aig_core::storage::BlobStore;
+use aig_core::sync;
 
 /// Helper: create a Database backed by a file inside the given directory.
 /// This avoids relying on the cwd-based `Database::new()`.
@@ -429,4 +430,297 @@ fn test_conversation_storage() {
     for row in &rows {
         assert_eq!(row.1, session_id);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Test 12: test_push_pull_notes_roundtrip
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_push_pull_notes_roundtrip() {
+    let dir = tempdir().unwrap();
+    let repo = init_test_repo(dir.path());
+    let db = create_db(dir.path());
+    db.init_schema().unwrap();
+
+    // Create an intent
+    let intent_id = intent::create_intent(&db, "roundtrip test intent").unwrap();
+
+    // Start a session
+    let session_id = SessionManager::start_session(&db, &intent_id).unwrap();
+
+    // Write a file and create a git commit
+    std::fs::write(dir.path().join("roundtrip.txt"), "roundtrip content").unwrap();
+    let sha = git_interop::create_commit(&repo, "add roundtrip.txt").unwrap();
+
+    // Create a checkpoint
+    let cp_id =
+        CheckpointManager::create_checkpoint(&db, &session_id, "roundtrip checkpoint", &sha, &repo)
+            .unwrap();
+    assert!(!cp_id.is_empty());
+
+    // Add a conversation record
+    db.conn
+        .execute(
+            "INSERT INTO conversations (id, session_id, message, created_at) VALUES (?1, ?2, ?3, datetime('now'))",
+            rusqlite::params!["conv-rt-1", session_id, "roundtrip conversation message"],
+        )
+        .unwrap();
+
+    // Push notes
+    let pushed = sync::push_notes(&db, &repo).unwrap();
+    assert_eq!(pushed, 1, "should push exactly 1 note");
+
+    // Verify git note exists on the commit
+    let oid = git2::Oid::from_str(&sha).unwrap();
+    let note = repo.find_note(Some("refs/notes/aig"), oid);
+    assert!(note.is_ok(), "git note should exist on the commit");
+
+    // Delete the DB and recreate with fresh schema
+    let aig_dir = dir.path().join(".aig");
+    let db_path = aig_dir.join("aig.db");
+    drop(db);
+    std::fs::remove_file(&db_path).unwrap();
+    let conn = rusqlite::Connection::open(&db_path).unwrap();
+    let db2 = Database { conn };
+    db2.init_schema().unwrap();
+
+    // Pull notes
+    let pulled = sync::pull_notes(&db2, &repo).unwrap();
+    assert_eq!(pulled, 1, "should pull exactly 1 note");
+
+    // Verify the intent exists in the new DB
+    let fetched_intent = intent::get_intent(&db2, &intent_id).unwrap();
+    assert_eq!(fetched_intent.description, "roundtrip test intent");
+
+    // Verify the checkpoint exists
+    let cp_row: (String, String) = db2
+        .conn
+        .query_row(
+            "SELECT id, git_commit_sha FROM checkpoints WHERE id = ?1",
+            rusqlite::params![cp_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(cp_row.0, cp_id);
+    assert_eq!(cp_row.1, sha);
+
+    // Verify conversations were restored
+    let conv_count: i64 = db2
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM conversations WHERE session_id = ?1",
+            rusqlite::params![session_id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(conv_count, 1, "conversation should be restored");
+}
+
+// ---------------------------------------------------------------------------
+// Test 13: test_pull_notes_idempotent
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_pull_notes_idempotent() {
+    let dir = tempdir().unwrap();
+    let repo = init_test_repo(dir.path());
+    let db = create_db(dir.path());
+    db.init_schema().unwrap();
+
+    // Create intent, session, commit, checkpoint
+    let intent_id = intent::create_intent(&db, "idempotent test").unwrap();
+    let session_id = SessionManager::start_session(&db, &intent_id).unwrap();
+    std::fs::write(dir.path().join("idem.txt"), "idempotent content").unwrap();
+    let sha = git_interop::create_commit(&repo, "add idem.txt").unwrap();
+    let _cp_id =
+        CheckpointManager::create_checkpoint(&db, &session_id, "idem checkpoint", &sha, &repo)
+            .unwrap();
+
+    // Push notes
+    sync::push_notes(&db, &repo).unwrap();
+
+    // Fresh DB
+    let aig_dir = dir.path().join(".aig");
+    let db_path = aig_dir.join("aig.db");
+    drop(db);
+    std::fs::remove_file(&db_path).unwrap();
+    let conn = rusqlite::Connection::open(&db_path).unwrap();
+    let db2 = Database { conn };
+    db2.init_schema().unwrap();
+
+    // Pull twice
+    let pulled1 = sync::pull_notes(&db2, &repo).unwrap();
+    assert_eq!(pulled1, 1);
+    let pulled2 = sync::pull_notes(&db2, &repo).unwrap();
+    assert_eq!(pulled2, 1); // still iterates, but INSERT OR IGNORE prevents duplicates
+
+    // Verify no duplicates
+    let intent_count: i64 = db2
+        .conn
+        .query_row("SELECT COUNT(*) FROM intents", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(
+        intent_count, 1,
+        "should have exactly 1 intent, not duplicates"
+    );
+
+    let cp_count: i64 = db2
+        .conn
+        .query_row("SELECT COUNT(*) FROM checkpoints", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(
+        cp_count, 1,
+        "should have exactly 1 checkpoint, not duplicates"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Test 14: test_incremental_import
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_incremental_import() {
+    let dir = tempdir().unwrap();
+    let repo = init_test_repo(dir.path());
+
+    // Create 3 commits
+    for i in 1..=3 {
+        let filename = format!("file{}.txt", i);
+        std::fs::write(dir.path().join(&filename), format!("content {}", i)).unwrap();
+        git_interop::create_commit(&repo, &format!("commit {}", i)).unwrap();
+    }
+
+    // Create the .aig DB
+    let db = create_db(dir.path());
+    db.init_schema().unwrap();
+
+    // First import using the repo path
+    // We can't call import_git_history directly because it creates its own Database::new().
+    // Instead, test the idempotency logic by importing manually, then re-importing.
+
+    // Get commits and cluster them
+    let commits = git_interop::get_log(&repo, 100).unwrap();
+    // Should have 4 commits: initial + 3 we created
+    assert_eq!(commits.len(), 4);
+
+    let clusters = cluster_commits(commits);
+
+    // Manually import all clusters (simulating first import)
+    for cluster in &clusters {
+        let intent_id = intent::create_intent(&db, &cluster.inferred_intent).unwrap();
+        for commit in &cluster.commits {
+            let cp_id = format!("cp-{}", &commit.sha[..8]);
+            let created_at = chrono::DateTime::from_timestamp(commit.timestamp, 0)
+                .map(|dt| dt.to_rfc3339())
+                .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+            db.conn
+                .execute(
+                    "INSERT INTO checkpoints (id, session_id, intent_id, git_commit_sha, message, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    rusqlite::params![cp_id, Option::<String>::None, intent_id, commit.sha, commit.message, created_at],
+                )
+                .unwrap();
+        }
+    }
+
+    let intent_count_before: i64 = db
+        .conn
+        .query_row("SELECT COUNT(*) FROM intents", [], |row| row.get(0))
+        .unwrap();
+    let cp_count_before: i64 = db
+        .conn
+        .query_row("SELECT COUNT(*) FROM checkpoints", [], |row| row.get(0))
+        .unwrap();
+
+    // Create 2 more commits
+    for i in 4..=5 {
+        let filename = format!("file{}.txt", i);
+        std::fs::write(dir.path().join(&filename), format!("content {}", i)).unwrap();
+        git_interop::create_commit(&repo, &format!("commit {}", i)).unwrap();
+    }
+
+    // Get new commits and cluster them
+    let all_commits = git_interop::get_log(&repo, 100).unwrap();
+    assert_eq!(all_commits.len(), 6); // initial + 5
+
+    let all_clusters = cluster_commits(all_commits);
+
+    // Simulate incremental import: skip commits that already have checkpoints
+    let mut new_intents = 0usize;
+    let mut new_commits = 0usize;
+    let mut skipped = 0usize;
+
+    for cluster in &all_clusters {
+        let mut new_in_cluster = Vec::new();
+        for commit in &cluster.commits {
+            let exists: bool = db
+                .conn
+                .query_row(
+                    "SELECT COUNT(*) > 0 FROM checkpoints WHERE git_commit_sha = ?1",
+                    rusqlite::params![commit.sha],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            if exists {
+                skipped += 1;
+            } else {
+                new_in_cluster.push(commit);
+            }
+        }
+
+        if new_in_cluster.is_empty() {
+            continue;
+        }
+
+        let intent_id = intent::create_intent(&db, &cluster.inferred_intent).unwrap();
+        for commit in &new_in_cluster {
+            let cp_id = format!("cp-new-{}", &commit.sha[..8]);
+            let created_at = chrono::DateTime::from_timestamp(commit.timestamp, 0)
+                .map(|dt| dt.to_rfc3339())
+                .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+            db.conn
+                .execute(
+                    "INSERT INTO checkpoints (id, session_id, intent_id, git_commit_sha, message, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    rusqlite::params![cp_id, Option::<String>::None, intent_id, commit.sha, commit.message, created_at],
+                )
+                .unwrap();
+        }
+        new_intents += 1;
+        new_commits += new_in_cluster.len();
+    }
+
+    // The original 4 commits (initial + 3) should have been skipped
+    assert!(
+        skipped >= 4,
+        "at least 4 commits should be skipped, got {}",
+        skipped
+    );
+
+    // New commits should have been imported
+    assert!(
+        new_commits >= 2,
+        "at least 2 new commits should be imported, got {}",
+        new_commits
+    );
+
+    // Verify no duplicates: total checkpoints should be before + new
+    let cp_count_after: i64 = db
+        .conn
+        .query_row("SELECT COUNT(*) FROM checkpoints", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(
+        cp_count_after,
+        cp_count_before + new_commits as i64,
+        "checkpoint count should increase by exactly the number of new commits"
+    );
+
+    let intent_count_after: i64 = db
+        .conn
+        .query_row("SELECT COUNT(*) FROM intents", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(
+        intent_count_after,
+        intent_count_before + new_intents as i64,
+        "intent count should increase by exactly the number of new intents"
+    );
 }

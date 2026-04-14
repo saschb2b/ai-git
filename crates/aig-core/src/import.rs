@@ -224,9 +224,31 @@ pub fn import_git_history(repo_path: &str) -> Result<()> {
 
     // 6. For each cluster, create an intent and link commits as checkpoints
     let total_clusters = clusters.len();
-    let mut total_commits: usize = 0;
+    let mut new_intents: usize = 0;
+    let mut new_commits: usize = 0;
+    let mut skipped_commits: usize = 0;
 
     for (i, cluster) in clusters.iter().enumerate() {
+        // Check which commits in this cluster are already imported
+        let mut new_in_cluster = Vec::new();
+        for commit in &cluster.commits {
+            let exists: bool = db.conn.query_row(
+                "SELECT COUNT(*) > 0 FROM checkpoints WHERE git_commit_sha = ?1",
+                rusqlite::params![commit.sha],
+                |row| row.get(0),
+            )?;
+            if exists {
+                skipped_commits += 1;
+            } else {
+                new_in_cluster.push(commit);
+            }
+        }
+
+        // If all commits in this cluster are already imported, skip the intent
+        if new_in_cluster.is_empty() {
+            continue;
+        }
+
         // Determine intent + summary: LLM path or heuristic fallback
         let (final_intent, final_summary) = if let Some(ref mut client) = ipc_client {
             // Gather commit messages and diff stats for the LLM
@@ -280,8 +302,8 @@ pub fn import_git_history(repo_path: &str) -> Result<()> {
             )?;
         }
 
-        // Insert a checkpoint for each commit in the cluster
-        for commit in &cluster.commits {
+        // Insert a checkpoint for each new commit in the cluster
+        for commit in &new_in_cluster {
             let cp_id = generate_checkpoint_id(&commit.sha);
             let created_at = chrono::DateTime::from_timestamp(commit.timestamp, 0)
                 .map(|dt| dt.to_rfc3339())
@@ -301,14 +323,24 @@ pub fn import_git_history(repo_path: &str) -> Result<()> {
             )?;
         }
 
-        total_commits += cluster.commits.len();
+        new_intents += 1;
+        new_commits += new_in_cluster.len();
     }
 
     // 7. Print summary
-    println!(
-        "Import complete: {} intents created from {} commits",
-        total_clusters, total_commits
-    );
+    if new_intents == 0 && skipped_commits > 0 {
+        println!("All commits already imported. Nothing to do.");
+    } else if skipped_commits > 0 {
+        println!(
+            "Import complete: {} new intents created from {} commits ({} already imported, skipped)",
+            new_intents, new_commits, skipped_commits
+        );
+    } else {
+        println!(
+            "Import complete: {} new intents created from {} commits",
+            new_intents, new_commits
+        );
+    }
 
     Ok(())
 }

@@ -75,6 +75,11 @@ enum Commands {
         #[arg(default_value = "origin")]
         remote: String,
     },
+    /// Review an intent — show summary, semantic changes, and conversation
+    Review {
+        /// Intent ID (first 8 chars). Omit to review the most recent intent.
+        intent_id: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -119,6 +124,7 @@ fn main() {
         Commands::Capture => cmd_capture(),
         Commands::Push { remote } => cmd_push(&remote),
         Commands::Pull { remote } => cmd_pull(&remote),
+        Commands::Review { intent_id } => cmd_review(intent_id.as_deref()),
     };
 
     if let Err(e) = result {
@@ -779,4 +785,220 @@ fn cmd_pull(remote: &str) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn cmd_review(intent_id: Option<&str>) -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+    let db = Database::new()?;
+
+    let intents = intent::list_intents(&db)?;
+    if intents.is_empty() {
+        println!("No intents recorded yet.");
+        println!("Start with: aig session start \"your intent\"");
+        return Ok(());
+    }
+
+    // Find the target intent
+    let intent_obj = if let Some(prefix) = intent_id {
+        intents
+            .into_iter()
+            .find(|i| i.id.starts_with(prefix))
+            .ok_or_else(|| anyhow::anyhow!("no intent found matching prefix \"{prefix}\""))?
+    } else {
+        // Most recent intent (list_intents is DESC by created_at)
+        intents.into_iter().next().unwrap()
+    };
+
+    // Header
+    let status = if intent_obj.closed_at.is_some() {
+        "done"
+    } else {
+        "active"
+    };
+    println!("Review: {}", intent_obj.description);
+    println!("Status: {status}");
+
+    // Duration
+    let start_display = format_datetime(&intent_obj.created_at);
+    if let Some(ref closed) = intent_obj.closed_at {
+        let end_display = format_datetime(closed);
+        let duration = compute_duration(&intent_obj.created_at, closed);
+        println!("Duration: {start_display} — {end_display} ({duration})");
+    } else {
+        let now = chrono::Utc::now().to_rfc3339();
+        let duration = compute_duration(&intent_obj.created_at, &now);
+        println!("Duration: {start_display} — now ({duration})");
+    }
+
+    // Checkpoints
+    let mut cp_stmt = db.conn.prepare(
+        "SELECT id, message, git_commit_sha, created_at FROM checkpoints WHERE intent_id = ?1 ORDER BY created_at",
+    )?;
+    let checkpoints: Vec<(String, String, String, String)> = cp_stmt
+        .query_map(rusqlite::params![intent_obj.id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    println!();
+    println!("Checkpoints ({}):", checkpoints.len());
+    for (i, (_cp_id, msg, sha, _ts)) in checkpoints.iter().enumerate() {
+        let short_sha = if sha.len() >= 8 { &sha[..8] } else { sha };
+        println!("  {}. ({short_sha}) {msg}", i + 1);
+    }
+
+    // Semantic changes: aggregate across all checkpoints, group by file
+    // For each (file_path, symbol_name), keep the latest change_type
+    use std::collections::BTreeMap;
+
+    // BTreeMap<file_path, Vec<(symbol_name, change_type)>> — dedup by symbol, last wins
+    let mut file_changes: BTreeMap<String, Vec<(String, String)>> = BTreeMap::new();
+
+    for (cp_id, _msg, _sha, _ts) in &checkpoints {
+        let mut sc_stmt = db.conn.prepare(
+            "SELECT file_path, change_type, symbol_name FROM semantic_changes WHERE checkpoint_id = ?1",
+        )?;
+        let scs: Vec<_> = sc_stmt
+            .query_map(rusqlite::params![cp_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        for (file_path, change_type, symbol_name) in scs {
+            let entry = file_changes.entry(file_path).or_default();
+            // Deduplicate by symbol_name, keeping latest change_type
+            if let Some(existing) = entry.iter_mut().find(|(s, _)| s == &symbol_name) {
+                existing.1 = change_type;
+            } else {
+                entry.push((symbol_name, change_type));
+            }
+        }
+    }
+
+    if !file_changes.is_empty() {
+        println!();
+        println!("Semantic changes:");
+        for (file_path, symbols) in &file_changes {
+            println!("  {file_path}");
+            for (symbol_name, change_type) in symbols {
+                let icon = change_type_icon(change_type);
+                println!("    {icon} {change_type} `{symbol_name}`");
+            }
+        }
+    }
+
+    // Files touched: collect unique file paths from git commits
+    let mut files_touched = Vec::new();
+    let repo = git_interop::open_repo(".")?;
+
+    for (_cp_id, _msg, sha, _ts) in &checkpoints {
+        if let Ok(oid) = git2::Oid::from_str(sha) {
+            if let Ok(commit) = repo.find_commit(oid) {
+                let parent_tree = commit.parent(0).ok().and_then(|p| p.tree().ok());
+                let commit_tree = match commit.tree() {
+                    Ok(t) => t,
+                    Err(_) => continue,
+                };
+                if let Ok(diff_result) =
+                    repo.diff_tree_to_tree(parent_tree.as_ref(), Some(&commit_tree), None)
+                {
+                    for delta in diff_result.deltas() {
+                        let path = delta.new_file().path().unwrap_or(Path::new(""));
+                        let path_str = path.to_string_lossy().to_string();
+                        if !files_touched.contains(&path_str) {
+                            files_touched.push(path_str);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    files_touched.sort();
+
+    println!();
+    println!("Files touched: {}", files_touched.len());
+    for f in &files_touched {
+        println!("  {f}");
+    }
+
+    // Conversation notes: query all sessions for this intent, then their conversations
+    let mut conv_stmt = db.conn.prepare(
+        "SELECT c.message FROM conversations c
+         JOIN sessions s ON c.session_id = s.id
+         WHERE s.intent_id = ?1
+         ORDER BY c.created_at",
+    )?;
+    let conversations: Vec<String> = conv_stmt
+        .query_map(rusqlite::params![intent_obj.id], |row| {
+            row.get::<_, String>(0)
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    if !conversations.is_empty() {
+        println!();
+        println!("Conversation ({} notes):", conversations.len());
+        for msg in &conversations {
+            println!("  - {msg}");
+        }
+    }
+
+    Ok(())
+}
+
+fn format_datetime(rfc3339: &str) -> String {
+    use chrono::DateTime;
+    match rfc3339.parse::<DateTime<chrono::Utc>>() {
+        Ok(dt) => dt.format("%Y-%m-%d %H:%M").to_string(),
+        Err(_) => rfc3339.to_string(),
+    }
+}
+
+fn compute_duration(start_rfc3339: &str, end_rfc3339: &str) -> String {
+    use chrono::DateTime;
+    let start = match start_rfc3339.parse::<DateTime<chrono::Utc>>() {
+        Ok(dt) => dt,
+        Err(_) => return "unknown".to_string(),
+    };
+    let end = match end_rfc3339.parse::<DateTime<chrono::Utc>>() {
+        Ok(dt) => dt,
+        Err(_) => return "unknown".to_string(),
+    };
+    let duration = end.signed_duration_since(start);
+    let total_secs = duration.num_seconds();
+    if total_secs < 0 {
+        return "unknown".to_string();
+    }
+    let days = total_secs / 86400;
+    let hours = (total_secs % 86400) / 3600;
+    let mins = (total_secs % 3600) / 60;
+
+    if days > 0 {
+        if days == 1 {
+            "1 day".to_string()
+        } else {
+            format!("{days} days")
+        }
+    } else if hours > 0 {
+        if hours == 1 && mins == 0 {
+            "1 hour".to_string()
+        } else if mins == 0 {
+            format!("{hours} hours")
+        } else {
+            format!("{hours} h {mins} min")
+        }
+    } else if mins > 0 {
+        format!("{mins} min")
+    } else {
+        format!("{total_secs} sec")
+    }
 }

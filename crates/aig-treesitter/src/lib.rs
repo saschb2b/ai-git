@@ -8,6 +8,10 @@ pub enum Language {
     Python,
     Rust,
     Go,
+    Java,
+    CSharp,
+    Cpp,
+    Ruby,
     Unknown,
 }
 
@@ -17,6 +21,10 @@ pub fn detect_language(file_path: &str) -> Language {
         Some("py") => Language::Python,
         Some("rs") => Language::Rust,
         Some("go") => Language::Go,
+        Some("java") => Language::Java,
+        Some("cs") => Language::CSharp,
+        Some("cpp" | "cc" | "cxx" | "hpp" | "h") => Language::Cpp,
+        Some("rb") => Language::Ruby,
         _ => Language::Unknown,
     }
 }
@@ -28,6 +36,10 @@ pub fn get_parser(lang: Language) -> Result<tree_sitter::Parser> {
         Language::Python => tree_sitter_python::LANGUAGE.into(),
         Language::Rust => tree_sitter_rust::LANGUAGE.into(),
         Language::Go => tree_sitter_go::LANGUAGE.into(),
+        Language::Java => tree_sitter_java::LANGUAGE.into(),
+        Language::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
+        Language::Cpp => tree_sitter_cpp::LANGUAGE.into(),
+        Language::Ruby => tree_sitter_ruby::LANGUAGE.into(),
         Language::Unknown => bail!("cannot create parser for unknown language"),
     };
     parser.set_language(&language)?;
@@ -81,6 +93,34 @@ fn definition_node_kinds(lang: Language) -> &'static [(&'static str, &'static st
             ("method_declaration", "method"),
             ("type_declaration", "type"),
             ("type_spec", "type"),
+        ],
+        Language::Java => &[
+            ("class_declaration", "class"),
+            ("interface_declaration", "interface"),
+            ("method_declaration", "method"),
+            ("constructor_declaration", "constructor"),
+            ("enum_declaration", "enum"),
+        ],
+        Language::CSharp => &[
+            ("class_declaration", "class"),
+            ("interface_declaration", "interface"),
+            ("method_declaration", "method"),
+            ("struct_declaration", "struct"),
+            ("enum_declaration", "enum"),
+            ("constructor_declaration", "constructor"),
+        ],
+        Language::Cpp => &[
+            ("function_definition", "function"),
+            ("class_specifier", "class"),
+            ("struct_specifier", "struct"),
+            ("enum_specifier", "enum"),
+            ("template_declaration", "template"),
+        ],
+        Language::Ruby => &[
+            ("method", "method"),
+            ("class", "class"),
+            ("module", "module"),
+            ("singleton_method", "method"),
         ],
         Language::Unknown => &[],
     }

@@ -29,6 +29,7 @@ Commands:
   capture       Capture the current Claude Code conversation into the active session
   push          Push aig metadata to remote via git notes
   pull          Pull aig metadata from remote via git notes
+  review        Review an intent — show summary, semantic changes, and conversation
   help          Print this message or the help of the given subcommand(s)
 
 Options:
