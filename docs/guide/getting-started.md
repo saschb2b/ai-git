@@ -37,6 +37,20 @@ $env:PATH = "$PWD\target\release;$env:PATH"
 
 ## Quick Start
 
+### Try it on your existing repo
+
+If you already have a git repo and want to see aig in action immediately:
+
+```bash
+cd your-existing-repo
+aig import          # imports git history, builds intent graph
+aig log             # browse intents instead of flat commits
+aig why src/app.py:42  # trace any line to its intent
+aig review          # review the most recent intent
+```
+
+That's it. Four commands, no setup beyond installing aig. Read on for the full workflow.
+
 The following walkthrough uses a small Python project as an example. Every command is runnable --- follow along in your own repository.
 
 ### 1. Initialize aig
@@ -249,7 +263,10 @@ No more guessing why a line exists. The full context --- from high-level intent 
 | `aig diff` | Show line-based diff |
 | `aig diff --semantic` | Show semantic (AST-level) diff |
 | `aig why file:line` | Trace a line to its intent, semantics, and reasoning |
-| `aig import` | Import existing git history |
+| `aig review [intent-id]` | Review an intent — summary, changes, conversations |
+| `aig import` | Import existing git history (idempotent) |
+| `aig push [remote]` | Push aig metadata to remote via git notes |
+| `aig pull [remote]` | Pull aig metadata from remote via git notes |
 | `aig capture` | Import Claude Code conversation into active session |
 | `aig watch [--auto-checkpoint]` | Watch files for changes, optionally auto-checkpoint |
 | `aig conversation add "note"` | Add manual reasoning note to session |
@@ -273,7 +290,7 @@ If you do not want to commit aig metadata to version control, add `.aig/` to you
 .aig/
 ```
 
-In a future release, aig metadata will be shareable across clones via [git notes](https://git-scm.com/docs/git-notes), so team members can access intent history without committing the `.aig/` directory.
+aig metadata can be shared across clones via git notes using `aig push` and `aig pull`. See the [Commands Reference](#commands-reference) for details.
 
 ## Supported Languages (Semantic Diff)
 
@@ -283,5 +300,9 @@ The semantic diff (`aig diff --semantic`) parses source files into ASTs to detec
 - **Python** (`.py`)
 - **Rust** (`.rs`)
 - **Go** (`.go`)
+- **Java** (`.java`)
+- **C#** (`.cs`)
+- **C++** (`.cpp`, `.cc`, `.cxx`, `.hpp`, `.h`)
+- **Ruby** (`.rb`)
 
-Note that `.js` and `.jsx` files are not currently supported --- only `.ts` and `.tsx`. For all other file types, aig falls back to a standard line-based diff automatically. No configuration is needed --- language detection is based on file extension.
+For all other file types, aig falls back to a standard line-based diff automatically. No configuration is needed — language detection is based on file extension.

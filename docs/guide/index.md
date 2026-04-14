@@ -48,4 +48,8 @@ Run `aig watch --auto-checkpoint` to have aig monitor your working directory and
 
 ## Current status
 
-aig is an MVP proving the core thesis. It ships 12 commands, semantic diff for 4 languages, Claude Code integration, file watching, and git import. Built in Rust + TypeScript, runs on Linux, macOS, and Windows. Install with `cargo install --git https://github.com/saschb2b/ai-git.git aig-core`.
+aig ships 16 commands, semantic diff for 8 languages, Claude Code integration, file watching, remote sync via git notes, and git import with incremental updates. Built in Rust + TypeScript, runs on Linux, macOS, and Windows.
+
+```bash
+cargo install --git https://github.com/saschb2b/ai-git.git aig-core
+```

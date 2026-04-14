@@ -24,6 +24,7 @@ The tools we use to track code history haven't kept up with how code is actually
 | Authorship | Single author field | Trust gradient (human/AI/confidence) |
 | Migration | — | `aig import` (non-destructive) |
 | Compatibility | — | Every aig repo is a valid git repo |
+| Sharing context | Commit messages + PR descriptions | `aig push/pull` syncs intents, conversations, and semantic changes via git notes |
 
 ## Concrete Examples
 
@@ -116,7 +117,11 @@ aig is additive. It captures information that currently gets lost, without chang
 - **Auto-capture on session end** — Conversations are preserved automatically
 - **File watching with auto-checkpoint** — `aig watch --auto-checkpoint` continuously captures file state changes
 - **`cargo install` support** — Install aig directly via Cargo
+- **Remote sync** — `aig push`/`aig pull` syncs metadata via git notes
+- **Intent-level review** — `aig review` shows PR-like summary at the intent level
+- **8-language semantic diff** — TypeScript, Python, Rust, Go, Java, C#, C++, Ruby
+- **Incremental import** — `aig import` is now safe to run multiple times
 
 ## What's Coming
 
-Next up: remote sync via git notes, semantic merge engine, trust scoring, TUI review interface, and more. See the full [Roadmap](/roadmap) for the path from MVP to git-equivalent ecosystem.
+Next up: semantic merge engine, trust scoring, TUI review interface, and more. See the full [Roadmap](/roadmap) for the path from MVP to git-equivalent ecosystem.
