@@ -23,6 +23,33 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Build aig binary
+        run: cargo build --release
+
+      - name: Generate CLI reference
+        run: bash scripts/generate-docs.sh
+
+      - name: Check CLI reference is up to date
+        run: |
+          if ! git diff --quiet docs/guide/cli-reference.md; then
+            echo "::error::CLI reference is out of date. Run ./scripts/generate-docs.sh and commit the result."
+            git diff docs/guide/cli-reference.md
+            exit 1
+          fi
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
