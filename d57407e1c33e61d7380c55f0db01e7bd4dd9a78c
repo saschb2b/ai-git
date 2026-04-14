@@ -1,18 +1,18 @@
 {
   "version": 1,
   "intent": {
-    "id": "21242190ab91ae45bca5ae066fb6ea98",
+    "id": "98c596252d73afbf6896af9b62df5bb4",
     "description": "Initial commit",
     "parent_id": null,
-    "created_at": "2026-04-14T01:23:48.561286700+00:00",
+    "created_at": "2026-04-14T01:24:40.612619700+00:00",
     "closed_at": null,
-    "summary": "Initial commit (10 commits: Initial commit; Add aig MVP: intent-based version control with docs site; Fix GitHub Pages CI: use root lockfile for pnpm cache; Add auto-generated CLI reference and CI sync check; Complete the core loop: semantic changes on checkpoint, IPC for import, 18 tests; Add CI pipeline with cross-platform tests and release artifacts; Add conversation capture, file watching, and cargo install support; Fix CLI reference: normalize aig.exe to aig for cross-platform CI; Update all docs to match current CLI output and features; Add roadmap page: 5-phase path from MVP to git-equivalent ecosystem)"
+    "summary": "Initial commit (11 commits: Initial commit; Add aig MVP: intent-based version control with docs site; Fix GitHub Pages CI: use root lockfile for pnpm cache; Add auto-generated CLI reference and CI sync check; Complete the core loop: semantic changes on checkpoint, IPC for import, 18 tests; Add CI pipeline with cross-platform tests and release artifacts; Add conversation capture, file watching, and cargo install support; Fix CLI reference: normalize aig.exe to aig for cross-platform CI; Update all docs to match current CLI output and features; Add roadmap page: 5-phase path from MVP to git-equivalent ecosystem; Add remote sync: aig push/pull via git notes)"
   },
   "session": null,
   "checkpoint": {
-    "id": "0b72da30770fc5d354c8cace6f076d9b",
+    "id": "95b09bb826c59d61a6066aa95dc08253",
     "session_id": null,
-    "intent_id": "21242190ab91ae45bca5ae066fb6ea98",
+    "intent_id": "98c596252d73afbf6896af9b62df5bb4",
     "message": "Update all docs to match current CLI output and features\n\n- Getting Started: rewritten with verified CLI output, all 12 commands,\n  cargo install instructions, capture and watch documented\n- Comparison: moved file watching to \"Recently Shipped\", added capture\n- Tech Stack: added capture.rs, watch.rs, notify to project structure\n- Homepage: updated feature cards for auto-capture and file watching\n- Guide intro: added capture and watch sections\n- Migration: mentions auto-capture on session end\n",
     "created_at": "2026-04-14T01:15:51+00:00"
   },
