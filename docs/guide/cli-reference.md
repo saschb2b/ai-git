@@ -18,7 +18,7 @@ Usage: aig <COMMAND>
 Commands:
   init          Initialize a new .aig directory in the current repo
   session       Manage development sessions
-  checkpoint    Create a checkpoint with a message
+  checkpoint    Create a checkpoint (auto-generates message from semantic diff if omitted)
   status        Show current aig status
   log           Show intent-level history
   diff          Show changes since last checkpoint
@@ -67,12 +67,12 @@ Options:
 ### `aig checkpoint`
 
 ```
-Create a checkpoint with a message
+Create a checkpoint (auto-generates message from semantic diff if omitted)
 
-Usage: aig checkpoint <MESSAGE>
+Usage: aig checkpoint [MESSAGE]
 
 Arguments:
-  <MESSAGE>  Checkpoint message
+  [MESSAGE]  Checkpoint message (optional — auto-generated from changes if omitted)
 
 Options:
   -h, --help  Print help

@@ -28,10 +28,10 @@ enum Commands {
         #[command(subcommand)]
         action: SessionAction,
     },
-    /// Create a checkpoint with a message
+    /// Create a checkpoint (auto-generates message from semantic diff if omitted)
     Checkpoint {
-        /// Checkpoint message
-        message: String,
+        /// Checkpoint message (optional — auto-generated from changes if omitted)
+        message: Option<String>,
     },
     /// Show current aig status
     Status,
@@ -113,7 +113,7 @@ fn main() {
             SessionAction::Start { intent } => cmd_session_start(&intent),
             SessionAction::End => cmd_session_end(),
         },
-        Commands::Checkpoint { message } => cmd_checkpoint(&message),
+        Commands::Checkpoint { message } => cmd_checkpoint(message.as_deref()),
         Commands::Status => cmd_status(),
         Commands::Log => cmd_log(),
         Commands::Diff { semantic } => cmd_diff(semantic),
@@ -238,7 +238,46 @@ fn cmd_session_end() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn cmd_checkpoint(message: &str) -> anyhow::Result<()> {
+fn auto_generate_checkpoint_message(repo: &git2::Repository) -> String {
+    // Generate a message from semantic diff of working changes
+    let changes = diff::get_working_changes(repo).unwrap_or_default();
+    let mut parts: Vec<String> = Vec::new();
+
+    for change in &changes {
+        let lang = aig_treesitter::detect_language(&change.path);
+        if lang == aig_treesitter::Language::Unknown {
+            continue;
+        }
+        if let Ok(sem_changes) =
+            aig_treesitter::semantic_diff(&change.old_content, &change.new_content, lang)
+        {
+            for sc in &sem_changes {
+                if !sc.symbol_name.is_empty() {
+                    parts.push(format!("{} {}", sc.change_type, sc.symbol_name));
+                }
+            }
+        }
+    }
+
+    if parts.is_empty() {
+        // Fall back to file names
+        let files: Vec<&str> = changes.iter().map(|c| c.path.as_str()).collect();
+        if files.is_empty() {
+            "Checkpoint".to_string()
+        } else if files.len() <= 3 {
+            format!("Update {}", files.join(", "))
+        } else {
+            format!("Update {} files", files.len())
+        }
+    } else if parts.len() <= 4 {
+        parts.join(", ")
+    } else {
+        let first = parts[..3].join(", ");
+        format!("{}, +{} more changes", first, parts.len() - 3)
+    }
+}
+
+fn cmd_checkpoint(message: Option<&str>) -> anyhow::Result<()> {
     ensure_aig_initialized()?;
     let db = Database::new()?;
 
@@ -248,8 +287,18 @@ fn cmd_checkpoint(message: &str) -> anyhow::Result<()> {
 
     let intent_obj = intent::get_intent(&db, &session.intent_id)?;
 
-    // Create a git commit
+    // Auto-generate message from semantic diff if not provided
     let repo = git_interop::open_repo(".")?;
+    let message = match message {
+        Some(m) => m.to_string(),
+        None => {
+            let generated = auto_generate_checkpoint_message(&repo);
+            println!("  auto-message: {generated}");
+            generated
+        }
+    };
+
+    // Create a git commit
     let git_sha = git_interop::create_commit(
         &repo,
         &format!("{}\n\naig intent: {}", message, intent_obj.description),
@@ -257,7 +306,7 @@ fn cmd_checkpoint(message: &str) -> anyhow::Result<()> {
 
     // Record the checkpoint in aig (also stores semantic changes via tree-sitter)
     let checkpoint_id =
-        CheckpointManager::create_checkpoint(&db, &session.id, message, &git_sha, &repo)?;
+        CheckpointManager::create_checkpoint(&db, &session.id, &message, &git_sha, &repo)?;
 
     let short_sha = &git_sha[..8];
     let short_id = &checkpoint_id[..12];
