@@ -1,3 +1,7 @@
+---
+description: "aig is an intent-based version control system that layers on top of git. It captures why code changes, not just what changed. See real output from aig running on its own repo."
+---
+
 # What is aig?
 
 aig is an intent-based version control system that layers on top of git. Instead of treating version history as a sequence of diffs, aig captures the full context behind every change: the goal you set out to accomplish, the conversation that shaped the implementation, and the structural impact on your codebase. The result is a history that anyone — human or AI — can actually understand months later.

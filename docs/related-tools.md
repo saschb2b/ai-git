@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: "How aig compares to Graphite, GitButler, Linear, CodeRabbit, Difftastic, Cursor, and other tools in the git ecosystem. What each tool adds and where aig fits."
 ---
 
 # Related Tools

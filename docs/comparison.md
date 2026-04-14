@@ -1,3 +1,7 @@
+---
+description: "Side-by-side comparison of git and aig. See how intent tracking, semantic diffs, and conversation capture solve the problems AI-assisted development creates for traditional version control."
+---
+
 # Git vs aig: What Changes
 
 ## The Problem

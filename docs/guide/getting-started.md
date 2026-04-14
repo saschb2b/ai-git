@@ -1,3 +1,7 @@
+---
+description: "Install aig and try it on your existing git repo in 60 seconds. Step-by-step guide with real CLI output for intent tracking, semantic diffs, and conversation capture."
+---
+
 # Getting Started
 
 This guide walks you through installing **aig**, initializing it in a project, and running through a complete workflow so you can see how intent-aware version control works in practice.

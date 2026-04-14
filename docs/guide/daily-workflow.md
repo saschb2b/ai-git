@@ -1,3 +1,7 @@
+---
+description: "How aig fits into your daily development routine. Replaces git commit, works with AI assistants, handles teams and branches. Includes quick reference table."
+---
+
 # Daily Workflow
 
 You've imported your repo and browsed the intent history. Now what? This page explains how aig fits into your actual daily routine — whether you work alone, with a team, or with an AI assistant.

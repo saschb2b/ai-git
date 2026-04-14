@@ -1,3 +1,7 @@
+---
+description: "Migrate any existing git repository to aig with a single command. Non-destructive import that builds an intent graph from your commit history."
+---
+
 # Migrating from Git
 
 ## Overview

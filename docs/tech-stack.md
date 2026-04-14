@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: "aig tech stack: Rust core engine, tree-sitter semantic diff, SQLite storage, TypeScript LLM integration. Architecture, project structure, and build instructions."
 ---
 
 # Tech Stack

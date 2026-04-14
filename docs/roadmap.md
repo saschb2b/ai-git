@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: "aig roadmap: from MVP to git-equivalent ecosystem in 5 phases. Remote sync, semantic merge, trust scoring, TUI review, web UI, multi-agent coordination."
 ---
 
 # Roadmap

@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: "Why git breaks down with AI-assisted development and what intent-based version control looks like. Five problems, a vision for semantic change tracking, and the case for conversation as first-class history."
 ---
 
 # Research & Vision
