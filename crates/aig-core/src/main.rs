@@ -206,12 +206,30 @@ fn cmd_checkpoint(message: &str) -> anyhow::Result<()> {
     let repo = git_interop::open_repo(".")?;
     let git_sha = git_interop::create_commit(&repo, &format!("{}\n\naig intent: {}", message, intent_obj.description))?;
 
-    // Record the checkpoint in aig
-    let checkpoint_id = CheckpointManager::create_checkpoint(&db, &session.id, message, &git_sha)?;
+    // Record the checkpoint in aig (also stores semantic changes via tree-sitter)
+    let checkpoint_id = CheckpointManager::create_checkpoint(&db, &session.id, message, &git_sha, &repo)?;
 
-    // Store semantic changes for changed files
     let short_sha = &git_sha[..8];
     let short_id = &checkpoint_id[..12];
+
+    // Show semantic changes that were recorded
+    let mut sc_stmt = db.conn.prepare(
+        "SELECT file_path, change_type, symbol_name FROM semantic_changes WHERE checkpoint_id = ?1",
+    )?;
+    let sem_changes: Vec<_> = sc_stmt.query_map(rusqlite::params![checkpoint_id], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+        ))
+    })?.collect::<Result<Vec<_>, _>>()?;
+
+    if !sem_changes.is_empty() {
+        println!("  semantic:");
+        for (file, change_type, symbol) in &sem_changes {
+            println!("    {} {} {symbol} ({file})", change_type_icon(change_type), change_type);
+        }
+    }
 
     println!("Checkpoint created");
     println!("  message:    {message}");
@@ -331,6 +349,28 @@ fn cmd_log() -> anyhow::Result<()> {
             let (msg, sha, _ts) = cp?;
             let short_sha = &sha[..8];
             println!("           ({short_sha}) {msg}");
+
+            // Show semantic changes for this checkpoint
+            let cp_id_result: Result<String, _> = db.conn.query_row(
+                "SELECT id FROM checkpoints WHERE git_commit_sha = ?1",
+                rusqlite::params![sha],
+                |row| row.get(0),
+            );
+            if let Ok(cp_id) = cp_id_result {
+                let mut sc_stmt = db.conn.prepare(
+                    "SELECT change_type, symbol_name, file_path FROM semantic_changes WHERE checkpoint_id = ?1",
+                )?;
+                let scs: Vec<_> = sc_stmt.query_map(rusqlite::params![cp_id], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                    ))
+                })?.collect::<Result<Vec<_>, _>>()?;
+                for (ct, sym, fp) in &scs {
+                    println!("                     {} {} `{sym}` ({fp})", change_type_icon(ct), ct);
+                }
+            }
         }
         println!();
     }
@@ -478,6 +518,30 @@ fn cmd_why(location: &str) -> anyhow::Result<()> {
             println!("  Checkpoint: {cp_msg}");
             println!("  Commit:     {short_sha}");
             println!("  Time:       {cp_time}");
+
+            // Show semantic changes for this checkpoint on this file
+            let mut sc_stmt = db.conn.prepare(
+                "SELECT change_type, symbol_name, details FROM semantic_changes
+                 WHERE checkpoint_id = ?1 AND file_path = ?2",
+            )?;
+            let sem_changes: Vec<_> = sc_stmt.query_map(
+                rusqlite::params![_cp_id, file_path],
+                |row| Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            )?.collect::<Result<Vec<_>, _>>()?;
+
+            if !sem_changes.is_empty() {
+                println!();
+                println!("  Semantic changes:");
+                for (change_type, symbol, details) in &sem_changes {
+                    let icon = change_type_icon(change_type);
+                    let detail_str = if details.is_empty() { String::new() } else { format!(" — {details}") };
+                    println!("    {icon} {change_type} `{symbol}`{detail_str}");
+                }
+            }
 
             // Show conversation notes for this session
             let conv_count: i64 = db.conn.query_row(

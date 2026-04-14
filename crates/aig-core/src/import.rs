@@ -1,10 +1,183 @@
 use anyhow::Result;
 use chrono::Utc;
 use sha2::{Digest, Sha256};
+use std::io::{BufRead, BufReader, Write};
+use std::path::Path;
+use std::process::{Child, Command, Stdio};
 
 use crate::db::Database;
 use crate::git_interop::{self, CommitInfo};
 use crate::intent;
+
+// ---------------------------------------------------------------------------
+// IPC client for optional LLM-powered intent inference
+// ---------------------------------------------------------------------------
+
+/// A lightweight IPC client that communicates with a TypeScript child process
+/// over NDJSON (newline-delimited JSON) on stdin/stdout.
+pub struct IpcClient {
+    child: Child,
+    reader: BufReader<std::process::ChildStdout>,
+}
+
+impl IpcClient {
+    /// Try to spawn the TypeScript LLM helper process.
+    ///
+    /// Returns `None` if the package is not installed, Node is not available,
+    /// or the process fails to start for any reason.
+    pub fn try_connect(repo_root: &str) -> Option<IpcClient> {
+        let script = Path::new(repo_root)
+            .join("node_modules")
+            .join("@aig")
+            .join("llm")
+            .join("dist")
+            .join("index.js");
+
+        if !script.exists() {
+            return None;
+        }
+
+        let mut child = Command::new("node")
+            .arg(&script)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .ok()?;
+
+        let stdout = child.stdout.take()?;
+        let reader = BufReader::new(stdout);
+
+        Some(IpcClient { child, reader })
+    }
+
+    /// Send an `infer_intent` request and read the response.
+    ///
+    /// Returns `(intent, summary)` on success, or an error if the child
+    /// process misbehaves.
+    pub fn infer_intent(
+        &mut self,
+        messages: &[String],
+        diff_stats: &[String],
+    ) -> Result<(String, String)> {
+        let request = serde_json::json!({
+            "command": "infer_intent",
+            "params": {
+                "commit_messages": messages,
+                "diff_stats": diff_stats,
+            }
+        });
+
+        let stdin = self
+            .child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("IPC stdin unavailable"))?;
+
+        let mut line = serde_json::to_string(&request)?;
+        line.push('\n');
+        stdin.write_all(line.as_bytes())?;
+        stdin.flush()?;
+
+        let mut response_line = String::new();
+        self.reader.read_line(&mut response_line)?;
+
+        if response_line.is_empty() {
+            anyhow::bail!("IPC process returned empty response");
+        }
+
+        let resp: serde_json::Value = serde_json::from_str(&response_line)?;
+
+        let result = resp
+            .get("result")
+            .ok_or_else(|| anyhow::anyhow!("IPC response missing 'result' field"))?;
+
+        let intent = result
+            .get("intent")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        let summary = result
+            .get("summary")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        Ok((intent, summary))
+    }
+}
+
+impl Drop for IpcClient {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Diff stats helper
+// ---------------------------------------------------------------------------
+
+/// Return per-file diff stats for a commit, e.g. `["src/auth.py: +42 -10"]`.
+///
+/// Diffs against the first parent (or the empty tree for root commits).
+pub fn get_commit_diff_stats(
+    repo: &git2::Repository,
+    commit: &git2::Commit,
+) -> Result<Vec<String>> {
+    let tree = commit.tree()?;
+
+    let parent_tree = if commit.parent_count() > 0 {
+        Some(commit.parent(0)?.tree()?)
+    } else {
+        None
+    };
+
+    let diff = repo.diff_tree_to_tree(parent_tree.as_ref(), Some(&tree), None)?;
+
+    let stats_list = diff.stats()?;
+    // Unfortunately git2's DiffStats only gives aggregate numbers, so we
+    // iterate over deltas and compute per-file stats via the patches.
+    let mut result = Vec::new();
+
+    let num_deltas = diff.deltas().len();
+    for idx in 0..num_deltas {
+        let delta = diff.get_delta(idx);
+        if delta.is_none() {
+            continue;
+        }
+        let delta = delta.unwrap();
+
+        let path = delta
+            .new_file()
+            .path()
+            .or_else(|| delta.old_file().path())
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "<unknown>".to_string());
+
+        // Use the patch to count insertions / deletions for this file.
+        if let Ok(patch) =
+            git2::Patch::from_diff(&diff, idx)
+        {
+            if let Some(patch) = patch {
+                let (_, additions, deletions) = patch.line_stats().unwrap_or((0, 0, 0));
+                result.push(format!("{}: +{} -{}", path, additions, deletions));
+            }
+        }
+    }
+
+    // If we couldn't get patches, fall back to aggregate stats only
+    if result.is_empty() && stats_list.files_changed() > 0 {
+        result.push(format!(
+            "(aggregate): +{} -{}",
+            stats_list.insertions(),
+            stats_list.deletions()
+        ));
+    }
+
+    Ok(result)
+}
 
 /// A cluster of related commits that likely represent a single intent.
 #[derive(Debug)]
@@ -41,29 +214,79 @@ pub fn import_git_history(repo_path: &str) -> Result<()> {
     let clusters = cluster_commits(commits);
     println!("Clustered into {} intents", clusters.len());
 
-    // 4. Initialize .aig/ database
+    // 4. Try to connect to the optional LLM IPC server
+    let mut ipc_client = IpcClient::try_connect(repo_path);
+    if ipc_client.is_some() {
+        println!("Using LLM for intent inference...");
+    } else {
+        println!("Using heuristic intent inference (install @aig/llm for better results)");
+    }
+
+    // 5. Initialize .aig/ database
     let db = Database::new()?;
     db.init_schema()?;
 
-    // 5. For each cluster, create an intent and link commits as checkpoints
+    // 6. For each cluster, create an intent and link commits as checkpoints
     let total_clusters = clusters.len();
     let mut total_commits: usize = 0;
 
     for (i, cluster) in clusters.iter().enumerate() {
+        // Determine intent + summary: LLM path or heuristic fallback
+        let (final_intent, final_summary) = if let Some(ref mut client) = ipc_client {
+            // Gather commit messages and diff stats for the LLM
+            let messages: Vec<String> = cluster
+                .commits
+                .iter()
+                .map(|c| c.message.clone())
+                .collect();
+
+            let diff_stats: Vec<String> = cluster
+                .commits
+                .iter()
+                .flat_map(|c| {
+                    // Look up the actual git2 commit to compute diff stats
+                    match repo.find_commit(git2::Oid::from_str(&c.sha).unwrap_or_else(|_| git2::Oid::zero())) {
+                        Ok(git_commit) => get_commit_diff_stats(&repo, &git_commit).unwrap_or_default(),
+                        Err(_) => Vec::new(),
+                    }
+                })
+                .collect();
+
+            match client.infer_intent(&messages, &diff_stats) {
+                Ok((intent, summary)) => (intent, summary),
+                Err(e) => {
+                    eprintln!(
+                        "Warning: LLM inference failed for cluster {}, falling back to heuristics: {}",
+                        i + 1,
+                        e
+                    );
+                    (
+                        cluster.inferred_intent.clone(),
+                        cluster.summary.clone(),
+                    )
+                }
+            }
+        } else {
+            (
+                cluster.inferred_intent.clone(),
+                cluster.summary.clone(),
+            )
+        };
+
         println!(
             "Importing intent {}/{}: \"{}\"",
             i + 1,
             total_clusters,
-            truncate_for_display(&cluster.inferred_intent, 60)
+            truncate_for_display(&final_intent, 60)
         );
 
-        let intent_id = intent::create_intent(&db, &cluster.inferred_intent)?;
+        let intent_id = intent::create_intent(&db, &final_intent)?;
 
         // Optionally store the summary on the intent
-        if !cluster.summary.is_empty() {
+        if !final_summary.is_empty() {
             db.conn.execute(
                 "UPDATE intents SET summary = ?1 WHERE id = ?2",
-                rusqlite::params![cluster.summary, intent_id],
+                rusqlite::params![final_summary, intent_id],
             )?;
         }
 
@@ -91,7 +314,7 @@ pub fn import_git_history(repo_path: &str) -> Result<()> {
         total_commits += cluster.commits.len();
     }
 
-    // 6. Print summary
+    // 7. Print summary
     println!(
         "Import complete: {} intents created from {} commits",
         total_clusters, total_commits
