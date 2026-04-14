@@ -150,20 +150,21 @@ The semantic diff operates at the AST level --- it shows which functions, classe
 
 ### 6. Create a checkpoint
 
-A checkpoint bundles a git commit with aig metadata. It links the commit to the current intent, conversation notes, and semantic changes:
+A checkpoint bundles a git commit with aig metadata. It links the commit to the current intent, conversation notes, and semantic changes. **The message is optional** — if you omit it, aig generates one from the semantic diff:
 
 ```bash
-aig checkpoint "Registration endpoint with email validation"
+aig checkpoint
 ```
 
 ```
+  auto-message: added hash_password, added validate_email, added register_user, modified setup_routes
   semantic:
     + added hash_password (src/auth.py)
     + added validate_email (src/auth.py)
     + added register_user (src/routes.py)
     ~ modified setup_routes (src/routes.py)
 Checkpoint created
-  message:    Registration endpoint with email validation
+  message:    added hash_password, added validate_email, added register_user, modified setup_routes
   intent:     Add user registration endpoint
   git commit: 4d95745f
   checkpoint: 3ee53e687f0c
@@ -257,7 +258,7 @@ No more guessing why a line exists. The full context --- from high-level intent 
 | `aig init` | Initialize aig in current git repo |
 | `aig session start "intent"` | Start a tracked session |
 | `aig session end` | End current session (auto-captures conversation) |
-| `aig checkpoint "message"` | Create checkpoint (git commit + semantic analysis) |
+| `aig checkpoint [message]` | Create checkpoint — auto-generates message from semantic diff if omitted |
 | `aig status` | Show active session and working tree state |
 | `aig log` | Show intent-level history with semantic changes |
 | `aig diff` | Show line-based diff |

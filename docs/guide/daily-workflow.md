@@ -6,6 +6,8 @@ You've imported your repo and browsed the intent history. Now what? This page ex
 
 **`aig checkpoint` replaces `git commit`.** You don't use both. A checkpoint creates a real git commit under the hood, plus records the intent, semantic changes, and conversation context. Everything downstream (GitHub, CI, PRs) sees a normal git commit.
 
+**You don't need to write a message.** Run `aig checkpoint` with no arguments and aig auto-generates the message from the semantic diff — e.g., `"added generate_token, added validate_token, added AuthMiddleware"`. You can still pass an explicit message if you want: `aig checkpoint "my message"`.
+
 ```bash
 # Before: git workflow
 git add .
@@ -15,12 +17,12 @@ git push
 # After: aig workflow
 aig session start "Add authentication"
 # ... work ...
-aig checkpoint "JWT token generation working"
+aig checkpoint                   # auto-message from semantic diff
 # ... more work ...
-aig checkpoint "Auth middleware integrated"
+aig checkpoint                   # auto-message: "modified authenticate, added require_auth"
 aig session end
-git push                     # still push with git — aig doesn't replace transport
-aig push                     # also push the aig metadata (intents, conversations)
+git push                         # still push with git — aig doesn't replace transport
+aig push                         # also push the aig metadata (intents, conversations)
 ```
 
 ## Solo Developer Workflow
@@ -35,12 +37,18 @@ That's it. You've declared what you're working on. Now work normally — edit fi
 
 ### While working
 
-Checkpoint whenever you reach a meaningful state:
+Checkpoint whenever you reach a meaningful state. No message needed — aig generates one from what changed:
 
 ```bash
-aig checkpoint "Reproduced the timeout in tests"
-aig checkpoint "Root cause: missing connection pool limit"
-aig checkpoint "Fix applied, tests passing"
+aig checkpoint                    # -> "added test_payment_timeout"
+aig checkpoint                    # -> "modified connect, added pool_limit"
+aig checkpoint                    # -> "modified test_payment_timeout"
+```
+
+Or pass an explicit message when you want to add context beyond what the code shows:
+
+```bash
+aig checkpoint "Fix applied — root cause was missing connection pool limit"
 ```
 
 Each checkpoint is a git commit. You can make as many as you want. They all link back to the same intent.
@@ -229,7 +237,7 @@ Press Ctrl+C to stop watching, then `aig session end` when done.
 | When | Command |
 |---|---|
 | Start working on something | `aig session start "what you're doing"` |
-| Reached a meaningful state | `aig checkpoint "what you accomplished"` |
+| Reached a meaningful state | `aig checkpoint` (auto-message) or `aig checkpoint "message"` |
 | Made a design decision | `aig conversation add "why you chose X"` |
 | Done with this task | `aig session end` |
 | Share with team | `git push && aig push` |

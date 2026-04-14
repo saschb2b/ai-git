@@ -20,20 +20,18 @@ aig organizes every change into three layers:
 
 ```bash
 aig session start "Add JWT authentication"
-aig conversation add "Using HS256 for simplicity in single-service deployment"
-# ... make changes ...
-aig checkpoint "Token generation and validation working"
-aig diff --semantic
-# Output:
-#   + added `generate_token`
-#   + added `validate_token`
-#   ~ modified `authenticate` — added JWT verification
+# ... make changes with your AI assistant ...
+aig checkpoint
+# -> auto-message: "added generate_token, added validate_token, added AuthMiddleware"
+
+# Or add your own message when context matters:
+aig checkpoint "Using HS256 over RS256 for single-service simplicity"
 
 # Later, anyone can ask:
 aig why src/auth.py:42
-# Output:
-#   Intent: "Add JWT authentication"
-#   Note: "Using HS256 for simplicity..."
+# -> Intent: "Add JWT authentication"
+# -> Semantic: + added `generate_token`
+# -> Conversation: (auto-captured from Claude Code)
 ```
 
 You start a session with an intent, optionally annotate decisions along the way, and checkpoint your progress. The semantic diff shows structural changes at a glance. And `aig why` traces any line back through the intent and conversation that produced it.
