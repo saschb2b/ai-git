@@ -1,0 +1,10 @@
+{
+  "name": "@aig/tui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo 'TUI: phase 2'",
+    "test": "echo 'TUI: phase 2'"
+  }
+}

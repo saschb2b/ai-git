@@ -1,0 +1,7 @@
+/target
+node_modules/
+dist/
+.aig/
+*.db
+docs/.vitepress/dist/
+docs/.vitepress/cache/
