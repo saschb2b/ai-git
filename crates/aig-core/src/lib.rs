@@ -7,4 +7,5 @@ pub mod import;
 pub mod intent;
 pub mod session;
 pub mod storage;
+pub mod sync;
 pub mod watch;

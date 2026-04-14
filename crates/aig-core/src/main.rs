@@ -63,6 +63,18 @@ enum Commands {
     },
     /// Capture the current Claude Code conversation into the active session
     Capture,
+    /// Push aig metadata to remote via git notes
+    Push {
+        /// Remote name (default: origin)
+        #[arg(default_value = "origin")]
+        remote: String,
+    },
+    /// Pull aig metadata from remote via git notes
+    Pull {
+        /// Remote name (default: origin)
+        #[arg(default_value = "origin")]
+        remote: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -105,6 +117,8 @@ fn main() {
         },
         Commands::Watch { auto_checkpoint } => cmd_watch(auto_checkpoint),
         Commands::Capture => cmd_capture(),
+        Commands::Push { remote } => cmd_push(&remote),
+        Commands::Pull { remote } => cmd_pull(&remote),
     };
 
     if let Err(e) = result {
@@ -718,6 +732,50 @@ fn cmd_capture() -> anyhow::Result<()> {
         Err(e) => {
             println!("Could not capture Claude Code conversation: {e}");
         }
+    }
+
+    Ok(())
+}
+
+fn cmd_push(remote: &str) -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+    let db = Database::new()?;
+    let repo = git_interop::open_repo(".")?;
+
+    println!("Writing aig metadata to git notes...");
+    let count = aig_core::sync::push_notes(&db, &repo)?;
+
+    if count == 0 {
+        println!("No checkpoints to push.");
+        return Ok(());
+    }
+
+    println!("Pushing refs/notes/aig to {remote}...");
+    aig_core::sync::push_to_remote(".", remote)?;
+
+    println!("Pushed {count} checkpoint(s) to {remote}");
+    Ok(())
+}
+
+fn cmd_pull(remote: &str) -> anyhow::Result<()> {
+    // Initialize aig if needed (pulling into a fresh clone)
+    if !Path::new(".aig").exists() {
+        cmd_init()?;
+    }
+
+    let db = Database::new()?;
+    let repo = git_interop::open_repo(".")?;
+
+    println!("Fetching refs/notes/aig from {remote}...");
+    aig_core::sync::pull_from_remote(".", remote)?;
+
+    println!("Importing aig metadata from git notes...");
+    let count = aig_core::sync::pull_notes(&db, &repo)?;
+
+    if count == 0 {
+        println!("No aig metadata found in remote notes.");
+    } else {
+        println!("Imported {count} checkpoint(s) from {remote}");
     }
 
     Ok(())
