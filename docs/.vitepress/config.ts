@@ -46,6 +46,7 @@ export default defineConfig({
       {
         text: 'Deep Dive',
         items: [
+          { text: 'Related Tools', link: '/related-tools' },
           { text: 'Roadmap', link: '/roadmap' },
           { text: 'Research & Vision', link: '/research' },
           { text: 'Tech Stack', link: '/tech-stack' },
