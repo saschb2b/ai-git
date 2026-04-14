@@ -23,13 +23,13 @@ features:
     details: See what actually changed in your code's structure — functions added, parameters modified, classes removed — not just lines of text.
   - icon: 💬
     title: Conversations as History
-    details: The human-AI conversation that produced the code is part of the version history. Run "aig why" to understand any line.
+    details: Claude Code conversations are auto-captured into your version history. Run "aig why" on any line to see the intent, reasoning, and AI dialogue that produced it.
   - icon: 🔄
     title: Git Compatible
     details: Built on top of git. Every aig repo is a valid git repo. Import existing history with a single command.
-  - icon: 🔍
-    title: Reviewable by Design
-    details: Impact-first review shows what behaviors changed, not walls of red and green. Multiple layers of abstraction for different audiences.
+  - icon: 👁️
+    title: File Watching
+    details: Run aig watch to monitor your working directory and auto-create checkpoints after quiet periods. No more forgotten commits.
   - icon: 🚀
     title: Migration in Seconds
     details: Run "aig import" in any git repo to retroactively build an intent graph from your commit history. Non-destructive, fully reversible.

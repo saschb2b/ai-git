@@ -47,6 +47,7 @@ Full technical decision document: [TECH_STACK.md on GitHub](https://github.com/s
 | **LLM integration** | TypeScript + Anthropic SDK | Best SDK ecosystem, streaming support |
 | **IPC** | NDJSON over stdin/stdout | Simple, debuggable, low overhead |
 | **Serialization** | MessagePack | Compact, schema-less, fast |
+| **File watching** | notify (v8) | Cross-platform fs events (inotify/FSEvents/ReadDirectoryChanges) |
 | **Async runtime** | Tokio | File watching, IPC, future network ops |
 
 ## Project Structure
@@ -56,15 +57,17 @@ ai-git/
 ├── crates/
 │   ├── aig-core/           # Rust: CLI binary, storage, git interop
 │   │   └── src/
-│   │       ├── main.rs      # CLI entry point (clap)
+│   │       ├── main.rs      # CLI entry point (clap) — 12 commands
 │   │       ├── db.rs        # SQLite database layer
 │   │       ├── storage.rs   # Content-addressable blob store
 │   │       ├── session.rs   # Session management
-│   │       ├── checkpoint.rs# Checkpoint creation
+│   │       ├── checkpoint.rs# Checkpoint creation + semantic change recording
 │   │       ├── intent.rs    # Intent CRUD
 │   │       ├── git_interop.rs # git2 integration
 │   │       ├── diff.rs      # Line-based diff + git working tree
-│   │       └── import.rs    # Git history import + clustering
+│   │       ├── import.rs    # Git history import + clustering + IPC
+│   │       ├── capture.rs   # Claude Code conversation capture
+│   │       └── watch.rs     # File system watching + auto-checkpoint
 │   └── aig-treesitter/      # Rust: multi-language semantic diff
 │       └── src/lib.rs       # Tree-sitter parsing + AST comparison
 ├── packages/

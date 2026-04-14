@@ -38,6 +38,14 @@ aig why src/auth.py:42
 
 You start a session with an intent, optionally annotate decisions along the way, and checkpoint your progress. The semantic diff shows structural changes at a glance. And `aig why` traces any line back through the intent and conversation that produced it.
 
+## Auto-capture from Claude Code
+
+If you use Claude Code, aig can automatically import the conversation that produced your changes. Run `aig capture` during a session, or let it happen automatically when you end a session with `aig session end`. The entire human-AI dialogue becomes part of your version history — no manual notes needed.
+
+## File watching
+
+Run `aig watch --auto-checkpoint` to have aig monitor your working directory and automatically create checkpoints after periods of quiet. No more forgetting to commit.
+
 ## Current status
 
-aig is currently an MVP proving the core thesis. It's built in Rust + TypeScript and runs on Linux, macOS, and Windows.
+aig is an MVP proving the core thesis. It ships 12 commands, semantic diff for 4 languages, Claude Code integration, file watching, and git import. Built in Rust + TypeScript, runs on Linux, macOS, and Windows. Install with `cargo install --git https://github.com/saschb2b/ai-git.git aig-core`.

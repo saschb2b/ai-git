@@ -110,11 +110,17 @@ To be clear about what aig is and isn't:
 
 aig is additive. It captures information that currently gets lost, without changing or risking anything that already works.
 
+## Recently Shipped
+
+- **Claude Code conversation capture** — `aig capture` auto-captures the AI conversation into version history
+- **Auto-capture on session end** — Conversations are preserved automatically
+- **File watching with auto-checkpoint** — `aig watch --auto-checkpoint` continuously captures file state changes
+- **`cargo install` support** — Install aig directly via Cargo
+
 ## What's Coming (Roadmap)
 
 These are planned but not yet built. No promises on timelines.
 
-- **Continuous file watching** — Auto-capture file state changes without manual checkpoints
 - **Semantic merge engine** — AST-level conflict resolution that understands code structure, not just text
 - **Trust scoring and provenance tracking** — Track confidence levels and origin of AI-generated code
 - **TUI review interface** — Terminal-based multi-layer review experience
