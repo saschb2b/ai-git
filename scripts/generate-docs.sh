@@ -41,18 +41,18 @@ This page is generated from the actual `aig` binary. Run `./scripts/generate-doc
 
 HEADER
 
-  # Main help
+  # Main help (normalize binary name: aig.exe -> aig)
   echo '```'
-  "$AIG" --help
+  "$AIG" --help | sed 's/aig\.exe/aig/g'
   echo '```'
   echo ""
 
   # Each subcommand's help
-  for cmd in init session checkpoint status log diff why import conversation; do
+  for cmd in init session checkpoint status log diff why import conversation watch capture; do
     echo "### \`aig $cmd\`"
     echo ""
     echo '```'
-    "$AIG" "$cmd" --help 2>&1 || true
+    "$AIG" "$cmd" --help 2>&1 | sed 's/aig\.exe/aig/g' || true
     echo '```'
     echo ""
   done
@@ -62,7 +62,7 @@ HEADER
     echo "### \`aig session $sub\`"
     echo ""
     echo '```'
-    "$AIG" session "$sub" --help 2>&1 || true
+    "$AIG" session "$sub" --help 2>&1 | sed 's/aig\.exe/aig/g' || true
     echo '```'
     echo ""
   done
@@ -71,7 +71,7 @@ HEADER
   echo "### \`aig conversation add\`"
   echo ""
   echo '```'
-  "$AIG" conversation add --help 2>&1 || true
+  "$AIG" conversation add --help 2>&1 | sed 's/aig\.exe/aig/g' || true
   echo '```'
   echo ""
 

@@ -13,7 +13,7 @@ This page is generated from the actual `aig` binary. Run `./scripts/generate-doc
 ```
 AI-native version control for intent-driven development
 
-Usage: aig.exe <COMMAND>
+Usage: aig <COMMAND>
 
 Commands:
   init          Initialize a new .aig directory in the current repo
@@ -38,7 +38,7 @@ Options:
 ```
 Initialize a new .aig directory in the current repo
 
-Usage: aig.exe init
+Usage: aig init
 
 Options:
   -h, --help  Print help
@@ -49,7 +49,7 @@ Options:
 ```
 Manage development sessions
 
-Usage: aig.exe session <COMMAND>
+Usage: aig session <COMMAND>
 
 Commands:
   start  Start a new session with an intent
@@ -65,7 +65,7 @@ Options:
 ```
 Create a checkpoint with a message
 
-Usage: aig.exe checkpoint <MESSAGE>
+Usage: aig checkpoint <MESSAGE>
 
 Arguments:
   <MESSAGE>  Checkpoint message
@@ -79,7 +79,7 @@ Options:
 ```
 Show current aig status
 
-Usage: aig.exe status
+Usage: aig status
 
 Options:
   -h, --help  Print help
@@ -90,7 +90,7 @@ Options:
 ```
 Show intent-level history
 
-Usage: aig.exe log
+Usage: aig log
 
 Options:
   -h, --help  Print help
@@ -101,7 +101,7 @@ Options:
 ```
 Show changes since last checkpoint
 
-Usage: aig.exe diff [OPTIONS]
+Usage: aig diff [OPTIONS]
 
 Options:
       --semantic  Use semantic (tree-sitter) diff instead of line diff
@@ -113,7 +113,7 @@ Options:
 ```
 Explain why a line/region was changed
 
-Usage: aig.exe why <LOCATION>
+Usage: aig why <LOCATION>
 
 Arguments:
   <LOCATION>  Location in the form "src/main.rs:42"
@@ -127,7 +127,7 @@ Options:
 ```
 Import existing git history into aig
 
-Usage: aig.exe import
+Usage: aig import
 
 Options:
   -h, --help  Print help
@@ -138,11 +138,34 @@ Options:
 ```
 Manage conversation records
 
-Usage: aig.exe conversation <COMMAND>
+Usage: aig conversation <COMMAND>
 
 Commands:
   add   Add a conversation message to the current session
   help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help
+```
+
+### `aig watch`
+
+```
+Watch for file changes and auto-checkpoint
+
+Usage: aig watch [OPTIONS]
+
+Options:
+      --auto-checkpoint  Automatically create checkpoints after quiet periods
+  -h, --help             Print help
+```
+
+### `aig capture`
+
+```
+Capture the current Claude Code conversation into the active session
+
+Usage: aig capture
 
 Options:
   -h, --help  Print help
@@ -153,7 +176,7 @@ Options:
 ```
 Start a new session with an intent
 
-Usage: aig.exe session start <INTENT>
+Usage: aig session start <INTENT>
 
 Arguments:
   <INTENT>  Description of the development intent
@@ -167,7 +190,7 @@ Options:
 ```
 End the current session
 
-Usage: aig.exe session end
+Usage: aig session end
 
 Options:
   -h, --help  Print help
@@ -178,7 +201,7 @@ Options:
 ```
 Add a conversation message to the current session
 
-Usage: aig.exe conversation add <MESSAGE>
+Usage: aig conversation add <MESSAGE>
 
 Arguments:
   <MESSAGE>  The message content
