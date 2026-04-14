@@ -1,18 +1,18 @@
 {
   "version": 1,
   "intent": {
-    "id": "21242190ab91ae45bca5ae066fb6ea98",
+    "id": "98c596252d73afbf6896af9b62df5bb4",
     "description": "Initial commit",
     "parent_id": null,
-    "created_at": "2026-04-14T01:23:48.561286700+00:00",
+    "created_at": "2026-04-14T01:24:40.612619700+00:00",
     "closed_at": null,
-    "summary": "Initial commit (10 commits: Initial commit; Add aig MVP: intent-based version control with docs site; Fix GitHub Pages CI: use root lockfile for pnpm cache; Add auto-generated CLI reference and CI sync check; Complete the core loop: semantic changes on checkpoint, IPC for import, 18 tests; Add CI pipeline with cross-platform tests and release artifacts; Add conversation capture, file watching, and cargo install support; Fix CLI reference: normalize aig.exe to aig for cross-platform CI; Update all docs to match current CLI output and features; Add roadmap page: 5-phase path from MVP to git-equivalent ecosystem)"
+    "summary": "Initial commit (11 commits: Initial commit; Add aig MVP: intent-based version control with docs site; Fix GitHub Pages CI: use root lockfile for pnpm cache; Add auto-generated CLI reference and CI sync check; Complete the core loop: semantic changes on checkpoint, IPC for import, 18 tests; Add CI pipeline with cross-platform tests and release artifacts; Add conversation capture, file watching, and cargo install support; Fix CLI reference: normalize aig.exe to aig for cross-platform CI; Update all docs to match current CLI output and features; Add roadmap page: 5-phase path from MVP to git-equivalent ecosystem; Add remote sync: aig push/pull via git notes)"
   },
   "session": null,
   "checkpoint": {
-    "id": "840d01388ec877b57438abc7bd01464c",
+    "id": "140424b792f87d7eb9cd8c9aba079bad",
     "session_id": null,
-    "intent_id": "21242190ab91ae45bca5ae066fb6ea98",
+    "intent_id": "98c596252d73afbf6896af9b62df5bb4",
     "message": "Add aig MVP: intent-based version control with docs site\n\nRust core engine (aig CLI):\n- aig init/session/checkpoint/status/log/diff/why/import/conversation\n- Tree-sitter semantic diff for TypeScript, Python, Rust, Go\n- SQLite storage for intents, sessions, checkpoints, conversations\n- Git interop via libgit2 (checkpoints create real git commits)\n- Git history import with commit clustering heuristics\n\nTypeScript orchestration layer:\n- Anthropic SDK integration for LLM-powered intent inference\n- NDJSON IPC protocol for Rust<->TypeScript communication\n- Commit clustering and intent inference for aig import\n\nVitePress documentation site (GitHub Pages):\n- Homepage, getting started guide, command reference\n- Git vs aig comparison with concrete examples\n- Migration guide for existing git repos\n- Research vision and tech stack pages\n- GitHub Actions workflow for automatic deployment\n\nResearch & planning documents:\n- RESEARCH.md: 5,000-word vision document\n- TECH_STACK.md: technical decision document\n- MVP.md: scope definition and success criteria\n",
     "created_at": "2026-04-14T00:44:33+00:00"
   },
