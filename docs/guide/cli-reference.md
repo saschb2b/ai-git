@@ -25,6 +25,8 @@ Commands:
   why           Explain why a line/region was changed
   import        Import existing git history into aig
   conversation  Manage conversation records
+  watch         Watch for file changes and auto-checkpoint
+  capture       Capture the current Claude Code conversation into the active session
   help          Print this message or the help of the given subcommand(s)
 
 Options:

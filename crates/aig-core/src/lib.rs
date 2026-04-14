@@ -1,3 +1,4 @@
+pub mod capture;
 pub mod checkpoint;
 pub mod db;
 pub mod diff;
@@ -6,3 +7,4 @@ pub mod import;
 pub mod intent;
 pub mod session;
 pub mod storage;
+pub mod watch;

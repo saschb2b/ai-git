@@ -1,3 +1,10 @@
 [workspace]
 resolver = "2"
 members = ["crates/aig-core", "crates/aig-treesitter"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/saschb2b/ai-git"
+description = "Intent-based version control for the AI age"

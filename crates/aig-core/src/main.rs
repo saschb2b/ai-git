@@ -55,6 +55,14 @@ enum Commands {
         #[command(subcommand)]
         action: ConversationAction,
     },
+    /// Watch for file changes and auto-checkpoint
+    Watch {
+        /// Automatically create checkpoints after quiet periods
+        #[arg(long)]
+        auto_checkpoint: bool,
+    },
+    /// Capture the current Claude Code conversation into the active session
+    Capture,
 }
 
 #[derive(Subcommand)]
@@ -95,6 +103,8 @@ fn main() {
         Commands::Conversation { action } => match action {
             ConversationAction::Add { message } => cmd_conversation_add(&message),
         },
+        Commands::Watch { auto_checkpoint } => cmd_watch(auto_checkpoint),
+        Commands::Capture => cmd_capture(),
     };
 
     if let Err(e) = result {
@@ -178,6 +188,15 @@ fn cmd_session_end() -> anyhow::Result<()> {
         "UPDATE intents SET closed_at = ?1 WHERE id = ?2",
         rusqlite::params![now, session.intent_id],
     )?;
+
+    // Auto-capture Claude Code conversation before ending the session
+    match aig_core::capture::capture_conversation(&db, &session.id) {
+        Ok(0) => {} // No conversation found, silently skip
+        Ok(count) => {
+            println!("Auto-captured {count} conversation entries from Claude Code");
+        }
+        Err(_) => {} // Silently skip capture errors
+    }
 
     // End the session
     SessionManager::end_session(&db, &session.id)?;
@@ -668,5 +687,38 @@ fn cmd_conversation_add(message: &str) -> anyhow::Result<()> {
     println!("Conversation note added to session");
     println!("  intent: {}", intent_obj.description);
     println!("  note:   {message}");
+    Ok(())
+}
+
+fn cmd_watch(auto_checkpoint: bool) -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+    aig_core::watch::watch_directory(".", auto_checkpoint)
+}
+
+fn cmd_capture() -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+    let db = Database::new()?;
+
+    let session = SessionManager::get_active_session(&db)?.ok_or_else(|| {
+        anyhow::anyhow!("no active session — start one with: aig session start \"intent\"")
+    })?;
+
+    let intent_obj = intent::get_intent(&db, &session.intent_id)?;
+
+    match aig_core::capture::capture_conversation(&db, &session.id) {
+        Ok(0) => {
+            println!("No Claude Code conversation found for this project.");
+            println!("Make sure Claude Code is running in this directory.");
+        }
+        Ok(count) => {
+            println!("Captured {count} conversation entries from Claude Code");
+            println!("  intent:  {}", intent_obj.description);
+            println!("  session: {}", &session.id[..12]);
+        }
+        Err(e) => {
+            println!("Could not capture Claude Code conversation: {e}");
+        }
+    }
+
     Ok(())
 }

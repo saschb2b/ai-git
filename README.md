@@ -4,6 +4,24 @@ Git was built for a world where humans typed every line. That world is ending.
 
 **aig** is a research project exploring what version control should look like when AI is a first-class participant in software development — not an afterthought bolted onto a 2005-era data model.
 
+## Installation
+
+### From source (recommended)
+```bash
+cargo install --git https://github.com/saschb2b/ai-git.git aig-core
+```
+
+### Build locally
+```bash
+git clone https://github.com/saschb2b/ai-git.git
+cd ai-git
+cargo build --release
+# Binary at target/release/aig (.exe on Windows)
+```
+
+### Pre-built binaries
+Download from [GitHub Actions artifacts](https://github.com/saschb2b/ai-git/actions) — builds are available for Linux, macOS, and Windows.
+
 ## The Core Idea
 
 Replace git's line-based diffs and manual commits with:
