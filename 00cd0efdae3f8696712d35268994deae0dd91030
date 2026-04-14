@@ -1,18 +1,18 @@
 {
   "version": 1,
   "intent": {
-    "id": "21242190ab91ae45bca5ae066fb6ea98",
+    "id": "98c596252d73afbf6896af9b62df5bb4",
     "description": "Initial commit",
     "parent_id": null,
-    "created_at": "2026-04-14T01:23:48.561286700+00:00",
+    "created_at": "2026-04-14T01:24:40.612619700+00:00",
     "closed_at": null,
-    "summary": "Initial commit (10 commits: Initial commit; Add aig MVP: intent-based version control with docs site; Fix GitHub Pages CI: use root lockfile for pnpm cache; Add auto-generated CLI reference and CI sync check; Complete the core loop: semantic changes on checkpoint, IPC for import, 18 tests; Add CI pipeline with cross-platform tests and release artifacts; Add conversation capture, file watching, and cargo install support; Fix CLI reference: normalize aig.exe to aig for cross-platform CI; Update all docs to match current CLI output and features; Add roadmap page: 5-phase path from MVP to git-equivalent ecosystem)"
+    "summary": "Initial commit (11 commits: Initial commit; Add aig MVP: intent-based version control with docs site; Fix GitHub Pages CI: use root lockfile for pnpm cache; Add auto-generated CLI reference and CI sync check; Complete the core loop: semantic changes on checkpoint, IPC for import, 18 tests; Add CI pipeline with cross-platform tests and release artifacts; Add conversation capture, file watching, and cargo install support; Fix CLI reference: normalize aig.exe to aig for cross-platform CI; Update all docs to match current CLI output and features; Add roadmap page: 5-phase path from MVP to git-equivalent ecosystem; Add remote sync: aig push/pull via git notes)"
   },
   "session": null,
   "checkpoint": {
-    "id": "2d1000369a546eafd4fce435f9f2bea1",
+    "id": "4b0804c70b76aa094d1538119b896507",
     "session_id": null,
-    "intent_id": "21242190ab91ae45bca5ae066fb6ea98",
+    "intent_id": "98c596252d73afbf6896af9b62df5bb4",
     "message": "Add roadmap page: 5-phase path from MVP to git-equivalent ecosystem\n\nPhase 1: Shareable (remote sync via git notes, incremental import)\nPhase 2: Smart (semantic merge, trust scoring, LLM-powered why)\nPhase 3: Visual (TUI review, web UI, IDE extensions)\nPhase 4: Collaborative (multi-agent, ownership maps, drift detection)\nPhase 5: Primary interface (native remotes, continuous versioning)\n\nIncludes honest gap analysis table (git ecosystem vs aig status).\nLinked from nav, sidebar, and comparison page.\n",
     "created_at": "2026-04-14T01:19:33+00:00"
   },
