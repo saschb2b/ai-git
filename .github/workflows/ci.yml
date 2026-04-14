@@ -20,6 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure git identity
+        run: |
+          git config --global user.name "Sascha Becker"
+          git config --global user.email "saschb2b@gmail.com"
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
