@@ -306,3 +306,7 @@ The semantic diff (`aig diff --semantic`) parses source files into ASTs to detec
 - **Ruby** (`.rb`)
 
 For all other file types, aig falls back to a standard line-based diff automatically. No configuration is needed — language detection is based on file extension.
+
+## Next Steps
+
+Now that you've seen the basics, read the [Daily Workflow](/guide/daily-workflow) guide to learn how aig fits into your actual routine — how it works alongside git, what to do with branches and PRs, how it integrates with AI assistants, and how to work in a team where not everyone uses aig.

@@ -38,6 +38,7 @@ export default defineConfig({
         text: 'Guide',
         items: [
           { text: 'Getting Started', link: '/guide/getting-started' },
+          { text: 'Daily Workflow', link: '/guide/daily-workflow' },
           { text: 'Migrating from Git', link: '/guide/migration' },
           { text: 'CLI Reference', link: '/guide/cli-reference' },
         ]
