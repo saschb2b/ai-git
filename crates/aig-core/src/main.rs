@@ -22,7 +22,11 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Initialize a new .aig directory in the current repo
-    Init,
+    Init {
+        /// Also run aig import after initialization
+        #[arg(long)]
+        import: bool,
+    },
     /// Manage development sessions
     Session {
         #[command(subcommand)]
@@ -145,7 +149,7 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Init => cmd_init(),
+        Commands::Init { import } => cmd_init_and_maybe_import(import),
         Commands::Session { action } => match action {
             SessionAction::Start { intent } => cmd_session_start(&intent),
             SessionAction::End => cmd_session_end(),
@@ -186,6 +190,14 @@ fn main() {
 fn ensure_aig_initialized() -> anyhow::Result<()> {
     if !Path::new(".aig").exists() {
         anyhow::bail!("not an aig repository (run `aig init` first)");
+    }
+    Ok(())
+}
+
+fn cmd_init_and_maybe_import(import: bool) -> anyhow::Result<()> {
+    cmd_init()?;
+    if import {
+        cmd_import()?;
     }
     Ok(())
 }
