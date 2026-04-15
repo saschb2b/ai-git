@@ -106,7 +106,13 @@ git push && aig push
 
 ### Pre-built binaries
 
-Download from [GitHub Releases](https://github.com/saschb2b/ai-git/releases) for Linux (x86_64), macOS (aarch64), and Windows (x86_64).
+Download the latest release for your platform:
+
+- [Linux (x86_64)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-linux.tar.gz)
+- [macOS (Apple Silicon)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-aarch64-macos.tar.gz)
+- [Windows (x86_64)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-windows.zip)
+
+Or browse [all releases](https://github.com/saschb2b/ai-git/releases).
 
 ### From source
 

@@ -8,7 +8,17 @@ This guide walks you through installing **aig**, initializing it in a project, a
 
 ## Installation
 
-### From source (recommended)
+### Pre-built binaries (fastest)
+
+Download the latest release for your platform and extract the `aig` binary:
+
+- [Linux (x86_64)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-linux.tar.gz)
+- [macOS (Apple Silicon)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-aarch64-macos.tar.gz)
+- [Windows (x86_64)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-windows.zip)
+
+Move the binary to a directory in your `PATH` (e.g., `/usr/local/bin` on Linux/macOS).
+
+### From source
 
 ```bash
 cargo install --git https://github.com/saschb2b/ai-git.git aig-core
@@ -23,21 +33,11 @@ cargo build --release
 # Binary at target/release/aig (.exe on Windows)
 ```
 
-To make the `aig` command available everywhere, add the binary to your `PATH`:
-
-```bash
-# Linux / macOS
-export PATH="$PWD/target/release:$PATH"
-
-# Windows (PowerShell)
-$env:PATH = "$PWD\target\release;$env:PATH"
-```
-
 ### Prerequisites
 
-- **Rust toolchain (1.75+)** --- install from [rustup.rs](https://rustup.rs)
 - **An existing git repository** --- aig layers on top of git; it does not replace it
-- **Node.js 20+** (optional) --- needed for LLM-powered import
+- **Rust toolchain (1.75+)** (only for source install) --- install from [rustup.rs](https://rustup.rs)
+- **Node.js 20+** (optional) --- needed for LLM-powered import and TUI review
 
 ## Quick Start
 
