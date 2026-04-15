@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { AigDatabase } from "./db.js";
+import { getCombinedDiff, getCommitDiff } from "./diff.js";
 
 function findAigDir(): string {
   let current = process.cwd();
@@ -52,6 +53,32 @@ export function registerApiRoutes(app: Express) {
       session,
       filesChanged,
     });
+  });
+
+  // Git repo root: walk up from .aig dir
+  const repoDir = path.resolve(aigDir, "..");
+
+  app.get("/api/intents/:id/diff", (req, res) => {
+    const intent = db.getIntent(req.params.id);
+    if (!intent) {
+      res.status(404).json({ error: "Intent not found" });
+      return;
+    }
+
+    const checkpoints = db.getCheckpoints(intent.id);
+    if (checkpoints.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    const shas = checkpoints.map((c) => c.git_commit_sha);
+    const files = getCombinedDiff(repoDir, shas);
+    res.json(files);
+  });
+
+  app.get("/api/commits/:sha/diff", (req, res) => {
+    const files = getCommitDiff(repoDir, req.params.sha);
+    res.json(files);
   });
 
   app.get("/api/timeline", (_req, res) => {

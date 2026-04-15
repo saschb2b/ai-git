@@ -9,9 +9,6 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Chip from "@mui/material/Chip";
-import Accordion from "@mui/material/Accordion";
-import AccordionSummary from "@mui/material/AccordionSummary";
-import AccordionDetails from "@mui/material/AccordionDetails";
 import LinearProgress from "@mui/material/LinearProgress";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -19,22 +16,16 @@ import Stack from "@mui/material/Stack";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Link from "@mui/material/Link";
 import Collapse from "@mui/material/Collapse";
-import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SearchIcon from "@mui/icons-material/Search";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { useState } from "react";
 import { StatusChip } from "../components/StatusChip";
+import { IntentDiffViewer, CommitDiffViewer } from "../components/DiffViewer";
 import { useApi } from "../hooks/useApi";
-
-interface SemanticChange {
-  file_path: string;
-  change_type: string;
-  symbol_name: string;
-}
 
 interface IntentDetail {
   intent: {
@@ -50,8 +41,8 @@ interface IntentDetail {
     git_commit_sha: string;
     created_at: string;
   }[];
-  semanticChanges: SemanticChange[];
-  changesByCheckpoint: Record<string, SemanticChange[]>;
+  semanticChanges: { file_path: string; change_type: string; symbol_name: string }[];
+  changesByCheckpoint: Record<string, unknown[]>;
   conversations: {
     id: string;
     message: string;
@@ -68,11 +59,6 @@ interface IntentDetail {
   filesChanged: number;
 }
 
-const CHANGE_COLORS: Record<string, string> = {
-  added: "#7ee787",
-  removed: "#ff7b72",
-  modified: "#e3b341",
-};
 
 const GITHUB_REPO = "https://github.com/saschb2b/ai-git";
 
@@ -101,79 +87,6 @@ function TabPanel({
   return <Box sx={{ py: 2 }}>{children}</Box>;
 }
 
-function ChangeChip({ type }: { type: string }) {
-  return (
-    <Chip
-      label={type}
-      size="small"
-      sx={{
-        mr: 1,
-        color: CHANGE_COLORS[type] ?? "#9e9eab",
-        borderColor: CHANGE_COLORS[type] ?? "#9e9eab",
-        fontWeight: 500,
-        fontSize: "0.7rem",
-        minWidth: 65,
-      }}
-      variant="outlined"
-    />
-  );
-}
-
-function ChangeList({
-  changes,
-  showFile = false,
-}: {
-  changes: SemanticChange[];
-  showFile?: boolean;
-}) {
-  return (
-    <Box sx={{ pl: 1 }}>
-      {changes.map((sc, i) => (
-        <Box
-          key={i}
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            py: 0.3,
-            fontFamily: "monospace",
-            fontSize: "0.8rem",
-          }}
-        >
-          <ChangeChip type={sc.change_type} />
-          <Typography
-            component="span"
-            fontSize="0.8rem"
-            fontFamily="monospace"
-            color="text.secondary"
-          >
-            {sc.symbol_name}
-          </Typography>
-          {showFile && (
-            <Typography
-              component="span"
-              fontSize="0.75rem"
-              color="text.disabled"
-              sx={{ ml: 1 }}
-            >
-              {sc.file_path}
-            </Typography>
-          )}
-        </Box>
-      ))}
-    </Box>
-  );
-}
-
-/** Deduplicate changes: keep the last state of each symbol per file. */
-function deduplicateChanges(changes: SemanticChange[]): SemanticChange[] {
-  const seen = new Map<string, SemanticChange>();
-  for (const sc of changes) {
-    const key = `${sc.file_path}::${sc.symbol_name}`;
-    seen.set(key, sc);
-  }
-  return Array.from(seen.values());
-}
-
 export function IntentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data, loading, error } = useApi<IntentDetail>(`/api/intents/${id}`);
@@ -198,7 +111,6 @@ export function IntentDetailPage() {
     intent,
     checkpoints,
     semanticChanges,
-    changesByCheckpoint,
     conversations,
     provenance,
     session,
@@ -213,17 +125,6 @@ export function IntentDetailPage() {
       return next;
     });
   };
-
-  // Deduplicate and group semantic changes by file for the Changes tab
-  const dedupedChanges = deduplicateChanges(semanticChanges);
-  const changesByFile = dedupedChanges.reduce(
-    (acc, sc) => {
-      if (!acc[sc.file_path]) acc[sc.file_path] = [];
-      acc[sc.file_path].push(sc);
-      return acc;
-    },
-    {} as Record<string, SemanticChange[]>,
-  );
 
   // Provenance stats
   const humanCount = provenance.filter((p) => p.origin === "human").length;
@@ -333,15 +234,14 @@ export function IntentDetailPage() {
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)}>
         <Tab label="Checkpoints" />
-        <Tab label="All Changes" />
+        <Tab label="Diff" />
         <Tab label={`Conversations (${conversations.length})`} />
         <Tab label="Trust" />
       </Tabs>
 
-      {/* Checkpoints tab — with inline semantic changes */}
+      {/* Checkpoints tab — with inline git diff */}
       <TabPanel value={tab} index={0}>
         {checkpoints.map((cp) => {
-          const cpChanges = changesByCheckpoint[cp.id] ?? [];
           const isExpanded = expandedCps.has(cp.id);
           return (
             <Box
@@ -350,7 +250,7 @@ export function IntentDetailPage() {
                 borderLeft: "2px solid",
                 borderColor: "primary.main",
                 pl: 2,
-                mb: 2,
+                mb: 3,
                 py: 1,
               }}
             >
@@ -373,25 +273,21 @@ export function IntentDetailPage() {
                     {new Date(cp.created_at).toLocaleString()}
                   </Typography>
                 </Box>
-                {cpChanges.length > 0 && (
-                  <Chip
-                    label={`${cpChanges.length} changes`}
-                    size="small"
-                    variant="outlined"
-                    onClick={() => toggleCp(cp.id)}
-                    onDelete={() => toggleCp(cp.id)}
-                    deleteIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    sx={{ cursor: "pointer" }}
-                  />
-                )}
+                <Chip
+                  label={isExpanded ? "Hide diff" : "Show diff"}
+                  size="small"
+                  variant="outlined"
+                  onClick={() => toggleCp(cp.id)}
+                  onDelete={() => toggleCp(cp.id)}
+                  deleteIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  sx={{ cursor: "pointer" }}
+                />
               </Stack>
-              {cpChanges.length > 0 && (
-                <Collapse in={isExpanded}>
-                  <Box sx={{ mt: 1, ml: 1 }}>
-                    <ChangeList changes={cpChanges} showFile />
-                  </Box>
-                </Collapse>
-              )}
+              <Collapse in={isExpanded}>
+                <Box sx={{ mt: 2 }}>
+                  <CommitDiffViewer sha={cp.git_commit_sha} />
+                </Box>
+              </Collapse>
             </Box>
           );
         })}
@@ -402,28 +298,9 @@ export function IntentDetailPage() {
         )}
       </TabPanel>
 
-      {/* All Changes tab — grouped by file */}
+      {/* Diff tab — combined diff across all checkpoints */}
       <TabPanel value={tab} index={1}>
-        {Object.entries(changesByFile).map(([file, changes]) => (
-          <Accordion key={file} defaultExpanded>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography fontFamily="monospace" fontSize="0.875rem">
-                {file}
-              </Typography>
-              <Typography sx={{ ml: "auto", mr: 2 }} color="text.secondary">
-                {changes.length}
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <ChangeList changes={changes} />
-            </AccordionDetails>
-          </Accordion>
-        ))}
-        {semanticChanges.length === 0 && (
-          <Typography color="text.secondary" sx={{ py: 2 }}>
-            No semantic changes recorded.
-          </Typography>
-        )}
+        <IntentDiffViewer intentId={intent.id} />
       </TabPanel>
 
       {/* Conversations tab — searchable, collapsible */}
