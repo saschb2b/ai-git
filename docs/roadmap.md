@@ -73,6 +73,9 @@ Semantic diff now supports 11 languages: TypeScript/JavaScript, Python, Rust, Go
 ### ~~TUI review interface~~ — Shipped
 `aig review --tui` opens an interactive terminal UI (React/Ink) with a navigable intent list on the left and details on the right — checkpoints, semantic changes, trust/provenance, and conversation notes. Navigate with j/k or arrow keys, q to quit.
 
+### Native TUI (ratatui rewrite)
+The current TUI is a Node.js/Ink app that requires Node.js at runtime and only works inside the source repo. End users installing via the release binary don't get it. Rewrite the TUI in Rust using [ratatui](https://ratatui.rs/) + crossterm so it compiles into the `aig` binary itself — single binary, zero runtime dependencies, works everywhere. The Rust binary already has `rusqlite` for DB access, so only the UI layer needs porting (~430 lines of TypeScript).
+
 ### Web UI
 A locally-served web interface for team-level features:
 - Intent graph visualization (D3) — see how features, refactors, and fixes relate
