@@ -15,134 +15,68 @@ hero:
       text: Why not Git?
       link: /comparison
 features:
-  - icon: "\U0001F50D"
+  - icon:
+      src: /icons/search.svg
+      width: 40
+      height: 40
     title: "git blame tells you WHO. aig why tells you WHY."
     details: "Trace any line back to the intent that created it, the semantic changes around it, and the conversation that shaped it."
-  - icon: "\U0001F333"
+  - icon:
+      src: /icons/tree.svg
+      width: 40
+      height: 40
     title: Semantic Diffs, Not Line Noise
     details: "See 'function authenticate() added' instead of 300 lines of red and green. Supports TypeScript, Python, Rust, Go, Java, C#, C++, and Ruby."
-  - icon: "\U0001F4AC"
+  - icon:
+      src: /icons/chat.svg
+      width: 40
+      height: 40
     title: AI Conversations Auto-Captured
     details: "AI conversations are auto-captured into your version history. Supports Claude Code out of the box, with a generic import format for any AI tool."
-  - icon: "\U0001F4E6"
+  - icon:
+      src: /icons/package.svg
+      width: 40
+      height: 40
     title: Works With Your Existing Repo
     details: "Run 'aig import' in any git repo to build an intent graph from your commit history. Non-destructive — your git history is untouched."
-  - icon: "\U0001F91D"
+  - icon:
+      src: /icons/git-merge.svg
+      width: 40
+      height: 40
     title: Fully Git Compatible
     details: "aig layers on top of git. Push, pull, branch, merge — everything works. Your repo stays a valid git repo. Teammates who don't use aig are unaffected."
-  - icon: "\U0001F680"
+  - icon:
+      src: /icons/rocket.svg
+      width: 40
+      height: 40
     title: Share Context Across Clones
     details: "aig push/pull syncs intent history via git notes. Clone a repo, run 'aig pull', and the full reasoning behind every change is there."
 ---
 
-<div class="vp-doc" style="max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem;">
+<TrustBar />
 
-## This Is What You'll See
+<div class="showcase">
+<div class="showcase-inner">
 
-Real output from aig running on its own repository.
-
-### git log vs aig log
-
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-<div>
-
-**git log**
-```
-43ed456 Initial commit
-fd990ed Add aig MVP
-d74a8cd Fix GitHub Pages CI
-6b42cef Add CLI reference
-7564dca Complete core loop
-6bdca12 Add conversation capture
-4c9fb74 Add CI pipeline
-4bcf69e Fix CLI reference
-d57407e Update all docs
-00cd0ef Add roadmap page
-7975e6d Add remote sync
-9ee934f Add 4 languages
-...
-```
-19 commits. A flat list. No narrative.
-
+<div class="showcase-block">
+<h2 class="showcase-heading">Your git log is a wall of noise</h2>
+<p class="showcase-sub">47 commits. Half of them say "wip". aig groups them into intents — the actual units of work.</p>
+<LogCompare />
 </div>
-<div>
 
-**aig log**
-```
-[44d3ab98] Rewrite docs (active)
-  7 checkpoint(s)
-    (120ab1e) Rewrite docs
-    (3e8142a) Add Daily Workflow
-    (ed3a9c5) Add aig repair
-    (635eb92) Add Related Tools
-    ...
+<div class="showcase-block">
+<h2 class="showcase-heading">git blame answers the wrong question</h2>
+<p class="showcase-sub">You don't need to know who wrote line 42. You need to know why it exists.</p>
+<BlameCompare />
+</div>
 
-[479d2692] Initial commit (active)
-  12 checkpoint(s)
-    (fd990ed) Add aig MVP
-    (7564dca) Complete core loop
-    (6bdca12) Add conversation capture
-    (7975e6d) Add remote sync
-    ...
-```
-2 intents. The story of how this project was built.
+<div class="showcase-block">
+<h2 class="showcase-heading">Stop writing commit messages</h2>
+<p class="showcase-sub">aig reads your code changes and describes them for you. Just type <code>aig checkpoint</code>.</p>
+<CheckpointDemo />
+</div>
 
 </div>
 </div>
 
-### git blame vs aig why
-
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-<div>
-
-**git blame capture.rs**
-```
-6bdca12 (Sascha Becker 2026-04-14)
-```
-A name and a date.
-
-</div>
-<div>
-
-**aig why capture.rs:1**
-```
-Intent:     [479d2692] Initial commit
-Checkpoint: Add conversation capture,
-            file watching, cargo install
-Commit:     6bdca120
-Time:       2026-04-14T01:06:24+00:00
-```
-The intent, the checkpoint, the full context.
-
-</div>
-</div>
-
-### aig checkpoint (no message needed)
-
-```
-$ aig checkpoint
-
-  auto-message: added generate_token, added validate_token, added AuthMiddleware
-  semantic:
-    + added generate_token (auth.py)
-    + added validate_token (auth.py)
-    + added AuthMiddleware (auth.py)
-Checkpoint created
-  intent:     Add authentication
-  git commit: 8d5b5ff9
-```
-
-The code describes its own changes. You just type `aig checkpoint`.
-
-### Install and try it
-
-```bash
-cargo install --git https://github.com/saschb2b/ai-git.git aig-core
-cd your-repo
-aig import
-aig log
-```
-
-Four commands. Your git history is untouched. [Get started](/guide/getting-started).
-
-</div>
+<CtaInstall />

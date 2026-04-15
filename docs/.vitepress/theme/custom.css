@@ -1,0 +1,434 @@
+/* ===== Brand Colors ===== */
+:root {
+  --vp-c-brand-1: #646cff;
+  --vp-c-brand-2: #747bff;
+  --vp-c-brand-3: #535bf2;
+  --vp-c-brand-soft: rgba(100, 108, 255, 0.14);
+
+  --aig-bg: #0d1117;
+  --aig-bg-subtle: #161b22;
+  --aig-border: #21262d;
+  --aig-terminal-bg: #0d1117;
+  --aig-terminal-border: #30363d;
+  --aig-terminal-dot-red: #ff5f57;
+  --aig-terminal-dot-yellow: #febc2e;
+  --aig-terminal-dot-green: #28c840;
+}
+
+/* ===== Full dark canvas for home page ===== */
+.VPHome {
+  padding-bottom: 0 !important;
+  background: var(--aig-bg) !important;
+}
+
+/* The VPContent wrapper also needs dark bg to avoid white flash */
+.is-home .VPContent {
+  background: var(--aig-bg) !important;
+}
+
+/* ===== Hero Section ===== */
+.VPHero {
+  position: relative;
+  padding-bottom: 4rem !important;
+  background: transparent !important;
+}
+
+/* Subtle radial glow behind hero */
+.VPHero::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 600px;
+  background: radial-gradient(ellipse, rgba(100, 108, 255, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.VPHero .VPImage {
+  max-width: 400px !important;
+  max-height: 380px !important;
+}
+
+.VPHero .name {
+  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.VPHero .text {
+  color: #e2e8f0 !important;
+}
+
+.VPHero .tagline {
+  color: #8b949e !important;
+}
+
+.VPHero .actions .VPButton.brand {
+  background: linear-gradient(135deg, var(--vp-c-brand-1), var(--vp-c-brand-3));
+  border: 1px solid rgba(100, 108, 255, 0.3);
+  box-shadow: 0 0 20px rgba(100, 108, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.VPHero .actions .VPButton.brand:hover {
+  box-shadow: 0 0 30px rgba(100, 108, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.VPHero .actions .VPButton.alt {
+  color: #c9d1d9 !important;
+  border-color: var(--aig-border) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.VPHero .actions .VPButton.alt:hover {
+  border-color: #30363d !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ===== Feature Cards - dark style ===== */
+.VPHome .VPFeatures {
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+}
+
+.VPFeature {
+  background: var(--aig-bg-subtle) !important;
+  border: 1px solid var(--aig-border) !important;
+  transition: border-color 0.3s ease !important;
+}
+
+.VPFeature:hover {
+  border-color: #30363d !important;
+}
+
+.VPFeature .title {
+  color: #e2e8f0 !important;
+}
+
+.VPFeature .details {
+  color: #8b949e !important;
+}
+
+.VPFeatures .VPFeature .icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.VPFeatures .VPFeature .icon img {
+  width: 40px;
+  height: 40px;
+}
+
+/* ===== Terminal Block Styles ===== */
+.terminal {
+  background: var(--aig-terminal-bg);
+  border: 1px solid var(--aig-terminal-border);
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--aig-bg-subtle);
+  border-bottom: 1px solid var(--aig-terminal-border);
+}
+
+.terminal-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.terminal-dots span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.terminal-dots span:nth-child(1) { background: var(--aig-terminal-dot-red); }
+.terminal-dots span:nth-child(2) { background: var(--aig-terminal-dot-yellow); }
+.terminal-dots span:nth-child(3) { background: var(--aig-terminal-dot-green); }
+
+.terminal-title {
+  color: #8b949e;
+  font-size: 12px;
+  margin-left: 8px;
+  flex: 1;
+  text-align: center;
+}
+
+.terminal-body {
+  padding: 16px 20px;
+  color: #c9d1d9;
+  overflow-x: auto;
+}
+
+.terminal-body pre {
+  margin: 0;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+/* ===== Terminal text colors ===== */
+.t-green { color: #7ee787; }
+.t-blue { color: #79c0ff; }
+.t-purple { color: #d2a8ff; }
+.t-yellow { color: #e3b341; }
+.t-dim { color: #484f58; }
+.t-orange { color: #ffa657; }
+.t-cyan { color: #a5d6ff; }
+.t-red { color: #ff7b72; }
+.t-white { color: #f0f6fc; }
+.t-muted { color: #8b949e; }
+.t-bold { font-weight: 600; }
+
+/* ===== Typing Animation ===== */
+@keyframes fadeInLine {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.terminal-line {
+  display: block;
+  opacity: 0;
+  animation: fadeInLine 0.3s ease forwards;
+  animation-delay: calc(var(--i) * 0.08s);
+}
+
+.terminal-cursor::after {
+  content: '\2588';
+  color: var(--vp-c-brand-1);
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+}
+
+/* ===== Showcase Section ===== */
+.showcase {
+  padding: 4rem 0 0;
+  position: relative;
+}
+
+.showcase-inner {
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.showcase-block {
+  padding: 4rem 0;
+  position: relative;
+}
+
+/* Gradient accent line between showcase blocks */
+.showcase-block + .showcase-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(100, 108, 255, 0.3), transparent);
+}
+
+.showcase-heading {
+  text-align: center;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 0.75rem;
+}
+
+.showcase-sub {
+  text-align: center;
+  font-size: 1.05rem;
+  color: #8b949e;
+  margin-bottom: 2.5rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.showcase-sub code {
+  color: #a5b4fc;
+  background: rgba(100, 108, 255, 0.1);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.95em;
+}
+
+/* ===== Terminal Compare Grid ===== */
+.terminal-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.terminal-compare .terminal.before {
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.terminal-compare .terminal.before:hover {
+  opacity: 0.85;
+}
+
+.terminal-compare .terminal.after {
+  border-color: rgba(100, 108, 255, 0.2);
+  box-shadow: 0 0 30px rgba(100, 108, 255, 0.06);
+}
+
+@media (max-width: 768px) {
+  .terminal-compare {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== Trust Bar ===== */
+.trust-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+  padding: 2.5rem 1.5rem;
+}
+
+.trust-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #484f58;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.trust-item svg {
+  width: 18px;
+  height: 18px;
+  color: #8b949e;
+  opacity: 0.5;
+}
+
+/* ===== CTA Section ===== */
+.cta-section {
+  padding: 5rem 1.5rem;
+  position: relative;
+}
+
+/* Gradient line separator above CTA */
+.cta-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(100, 108, 255, 0.3), transparent);
+}
+
+.cta-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #e2e8f0;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.cta-subtitle {
+  font-size: 1.15rem;
+  color: #8b949e;
+  margin-bottom: 2.5rem;
+  text-align: center;
+}
+
+.cta-terminal {
+  max-width: 520px;
+  margin: 0 auto 2.5rem;
+  text-align: left;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.cta-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.cta-button.primary {
+  background: linear-gradient(135deg, var(--vp-c-brand-1), var(--vp-c-brand-3));
+  color: #fff;
+  border: 1px solid rgba(100, 108, 255, 0.3);
+  box-shadow: 0 0 20px rgba(100, 108, 255, 0.2);
+}
+
+.cta-button.primary:hover {
+  box-shadow: 0 0 30px rgba(100, 108, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.cta-button.secondary {
+  color: #c9d1d9;
+  border: 1px solid var(--aig-border);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cta-button.secondary:hover {
+  border-color: #30363d;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ===== Responsive tweaks ===== */
+@media (max-width: 640px) {
+  .cta-title {
+    font-size: 1.75rem;
+  }
+
+  .showcase-heading {
+    font-size: 1.5rem;
+  }
+
+  .trust-bar {
+    gap: 1.5rem;
+  }
+}
+
+/* Hide VitePress footer on home page — CTA replaces it */
+.VPHome + .VPFooter {
+  display: none;
+}
