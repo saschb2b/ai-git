@@ -25,7 +25,7 @@ export interface SemanticChange {
 export interface ProvenanceEntry {
   file_path: string;
   origin: string;
-  reviewed: boolean;
+  reviewed: number; // SQLite returns 0/1, not boolean
   start_line: number;
   end_line: number;
 }
@@ -56,12 +56,17 @@ export class AigDatabase {
 
   getSemanticChanges(checkpointIds: string[]): SemanticChange[] {
     if (checkpointIds.length === 0) return [];
+    // Build IN(...) with safe placeholders, pass values as array
     const placeholders = checkpointIds.map(() => "?").join(",");
     return this.db
       .prepare(
-        `SELECT file_path, change_type, symbol_name FROM semantic_changes WHERE checkpoint_id IN (${placeholders})`,
+        `SELECT sc.file_path, sc.change_type, sc.symbol_name
+         FROM semantic_changes sc
+         JOIN checkpoints c ON sc.checkpoint_id = c.id
+         WHERE sc.checkpoint_id IN (${placeholders})
+         ORDER BY c.created_at, sc.id`,
       )
-      .all(...checkpointIds) as SemanticChange[];
+      .all(checkpointIds) as SemanticChange[];
   }
 
   getConversations(intentId: string): string[] {
