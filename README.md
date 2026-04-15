@@ -43,6 +43,26 @@ The full vision is laid out in **[RESEARCH.md](RESEARCH.md)** — a ~5,000-word 
 4. Collaboration models for humans, AIs, and teams
 5. A technical architecture sketch with example CLI commands
 
+## Repository Structure
+
+```
+ai-git/
+├── crates/
+│   ├── aig-core/            Rust CLI binary + library (21 commands)
+│   └── aig-treesitter/      Rust library: semantic diff engine (11 languages)
+├── packages/
+│   ├── aig-llm/             TypeScript: LLM integration (intent inference, explanations)
+│   └── aig-tui/             TypeScript: interactive terminal UI (React/Ink)
+├── docs/                    VitePress documentation site
+├── scripts/                 Build and doc generation scripts
+├── RESEARCH.md              Vision document (~5,000 words)
+└── TECH_STACK.md            Technology choices and rationale
+```
+
+The Rust binary (`aig`) is self-contained for most commands. Two optional features require Node.js:
+- **LLM features** (`aig import` with inference, `aig why --explain`) — calls `@aig/llm` via IPC
+- **TUI** (`aig review --tui`) — launches `@aig/tui` as a child process
+
 ## Status
 
 aig is working software — 21 commands, semantic diff for 11 languages, trust scoring, LLM-powered explanations, interactive TUI review, git hooks for zero-friction tracking, and remote sync via git notes. Built in Rust + TypeScript, runs on Linux, macOS, and Windows. See the [Getting Started](https://saschb2b.github.io/ai-git/guide/getting-started) guide or the [Roadmap](https://saschb2b.github.io/ai-git/roadmap) for what's next.
