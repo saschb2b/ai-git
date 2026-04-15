@@ -47,7 +47,7 @@ If you already have a git repo and want to see aig in action immediately:
 
 ```bash
 cd your-existing-repo
-aig import          # imports git history, builds intent graph
+aig init --import   # initialize aig and import git history in one step
 aig log             # browse intents instead of flat commits
 aig why src/app.py:42  # trace any line to its intent
 aig review          # review the most recent intent
@@ -63,7 +63,7 @@ Navigate to an existing git repository and run:
 
 ```bash
 cd your-project
-aig init
+aig init              # or: aig init --import to also import git history
 ```
 
 ```
@@ -260,22 +260,26 @@ No more guessing why a line exists. The full context --- from high-level intent 
 
 | Command | Description |
 |---|---|
-| `aig init` | Initialize aig in current git repo |
+| `aig init [--import]` | Initialize aig in current git repo (optionally import history) |
 | `aig session start "intent"` | Start a tracked session |
 | `aig session end` | End current session (auto-captures conversation) |
 | `aig checkpoint [message]` | Create checkpoint — auto-generates message from semantic diff if omitted |
 | `aig status` | Show active session and working tree state |
 | `aig log` | Show intent-level history with semantic changes |
-| `aig diff` | Show line-based diff |
-| `aig diff --semantic` | Show semantic (AST-level) diff |
-| `aig why file:line` | Trace a line to its intent, semantics, and reasoning |
-| `aig review [intent-id]` | Review an intent — summary, changes, conversations |
-| `aig import` | Import existing git history (idempotent) |
-| `aig push [remote]` | Push aig metadata to remote via git notes |
-| `aig pull [remote]` | Pull aig metadata from remote via git notes |
+| `aig diff [--semantic]` | Show line-based or semantic (AST-level) diff |
+| `aig why file:line [--explain]` | Trace a line to its intent (`--explain` for LLM synthesis) |
+| `aig review [--tui]` | Review an intent (`--tui` for interactive terminal UI) |
+| `aig import` | Import existing git history (idempotent, incremental) |
+| `aig push / pull [remote]` | Sync aig metadata to/from remote via git notes |
 | `aig capture` | Capture AI conversation (auto-detects Claude Code, or use `--file`) |
 | `aig watch [--auto-checkpoint]` | Watch files for changes, optionally auto-checkpoint |
 | `aig conversation add "note"` | Add manual reasoning note to session |
+| `aig hooks install / remove` | Install/remove git hooks for automatic tracking |
+| `aig trust [file]` | Show trust and provenance (human vs AI-assisted) |
+| `aig reviewed <target>` | Mark a file or intent as human-reviewed |
+| `aig export [output]` | Export .aig metadata to a portable bundle |
+| `aig import-bundle <path>` | Import .aig metadata from a bundle |
+| `aig repair` | Re-attach metadata after rebase/cherry-pick |
 
 ## What's Created
 
@@ -310,6 +314,9 @@ The semantic diff (`aig diff --semantic`) parses source files into ASTs to detec
 - **C#** (`.cs`)
 - **C++** (`.cpp`, `.cc`, `.cxx`, `.hpp`, `.h`)
 - **Ruby** (`.rb`)
+- **PHP** (`.php`)
+- **Kotlin** (`.kt`, `.kts`)
+- **Swift** (`.swift`)
 
 For all other file types, aig falls back to a standard line-based diff automatically. No configuration is needed — language detection is based on file extension.
 

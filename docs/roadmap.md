@@ -26,7 +26,12 @@ The foundation is in place. These features are shipped and working:
 | Metadata repair | `aig repair` (after rebase/cherry-pick) | Working |
 | Cross-platform CI | Linux, macOS, Windows | Working |
 | Bundle export/import | `aig export`, `aig import-bundle` | Working |
-| Installation | `cargo install --git` | Working |
+| Trust & provenance | `aig trust`, `aig reviewed` | Working |
+| LLM explanations | `aig why --explain` | Working |
+| Interactive TUI | `aig review --tui` | Working |
+| Git hooks | `aig hooks install/remove` | Working |
+| One-command onboarding | `aig init --import` | Working |
+| Installation | `cargo install --git` or GitHub Releases | Working |
 
 ## Phase 1: Make It Shareable <Badge type="tip" text="complete" />
 

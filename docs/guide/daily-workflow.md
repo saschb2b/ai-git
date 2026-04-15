@@ -236,6 +236,29 @@ aig watch --auto-checkpoint
 
 Press Ctrl+C to stop watching, then `aig session end` when done.
 
+## Git Hooks (Hands-Free Mode)
+
+For a fully automatic setup, install aig's git hooks:
+
+```bash
+aig hooks install
+```
+
+This installs three hooks:
+- **post-commit** — auto-creates a checkpoint after each `git commit`
+- **post-checkout** — auto-starts a session named after the branch when you switch branches
+- **pre-push** — auto-syncs aig metadata when you push
+
+With hooks installed, you don't need to remember `aig checkpoint` or `aig push` — they happen automatically. You can still use `aig session start` to override the auto-generated session name, and `aig conversation add` to annotate decisions.
+
+To remove the hooks:
+
+```bash
+aig hooks remove
+```
+
+Hooks never overwrite existing non-aig hooks, and failures don't block git operations.
+
 ## Quick Reference: Daily Commands
 
 | When | Command |
@@ -251,3 +274,9 @@ Press Ctrl+C to stop watching, then `aig session end` when done.
 | Import non-aig commits | `aig import` |
 | After rebase/cherry-pick | `aig repair` |
 | Hands-free mode | `aig watch --auto-checkpoint` |
+| Install auto-tracking hooks | `aig hooks install` |
+| Check provenance | `aig trust [file]` |
+| Mark code as reviewed | `aig reviewed <file or intent>` |
+| LLM explanation | `aig why file:line --explain` |
+| Interactive review | `aig review --tui` |
+| Backup/restore metadata | `aig export` / `aig import-bundle <file>` |

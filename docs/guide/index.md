@@ -130,7 +130,7 @@ Run `aig watch --auto-checkpoint` to have aig monitor your working directory and
 
 ## Current status
 
-aig ships 16 commands, semantic diff for 8 languages, AI conversation capture (Claude Code auto-detected, generic JSONL import for any tool), file watching, remote sync via git notes, and git import with incremental updates. Built in Rust + TypeScript, runs on Linux, macOS, and Windows.
+aig ships 21 commands, semantic diff for 11 languages, trust scoring and provenance tracking, LLM-powered explanations (`aig why --explain`), an interactive TUI review (`aig review --tui`), git hooks for automatic tracking, portable bundle export/import, AI conversation capture, file watching, remote sync, and git import with incremental updates. Built in Rust + TypeScript, runs on Linux, macOS, and Windows.
 
 ```bash
 cargo install --git https://github.com/saschb2b/ai-git.git aig-core

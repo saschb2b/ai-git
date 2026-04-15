@@ -20,7 +20,7 @@ cargo build --release
 ```
 
 ### Pre-built binaries
-Download from [GitHub Actions artifacts](https://github.com/saschb2b/ai-git/actions) — builds are available for Linux, macOS, and Windows.
+Download from [GitHub Releases](https://github.com/saschb2b/ai-git/releases) — builds are available for Linux (x86_64), macOS (aarch64), and Windows (x86_64).
 
 ## The Core Idea
 
@@ -45,4 +45,4 @@ The full vision is laid out in **[RESEARCH.md](RESEARCH.md)** — a ~5,000-word 
 
 ## Status
 
-This is a research/vision document, not working software (yet). Contributions, critiques, and wild ideas welcome.
+aig is working software — 21 commands, semantic diff for 11 languages, trust scoring, LLM-powered explanations, interactive TUI review, git hooks for zero-friction tracking, and remote sync via git notes. Built in Rust + TypeScript, runs on Linux, macOS, and Windows. See the [Getting Started](https://saschb2b.github.io/ai-git/guide/getting-started) guide or the [Roadmap](https://saschb2b.github.io/ai-git/roadmap) for what's next.

@@ -121,8 +121,8 @@ The imported history and your new aig sessions live side by side in the same dat
 
 ## Re-importing
 
-If you want to re-import --- for example, after more commits were made by non-aig users:
+`aig import` is incremental and safe to run repeatedly. It detects commits added since the last import and processes only those — already-imported commits are skipped automatically. This is useful for mixed teams where some members use aig and others use plain git:
 
-- Currently, re-running `aig import` will add duplicate intents. There is no deduplication in the MVP.
-- **Recommendation:** import once, then use aig sessions going forward.
-- Future versions will support incremental import, processing only commits that appeared since the last import.
+```bash
+aig import           # safe to run anytime — skips already-imported commits
+```

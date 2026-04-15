@@ -123,9 +123,9 @@ aig is additive. It captures information that currently gets lost, without chang
 - **`cargo install` support** — Install aig directly via Cargo
 - **Remote sync** — `aig push`/`aig pull` syncs metadata via git notes
 - **Intent-level review** — `aig review` shows PR-like summary at the intent level
-- **8-language semantic diff** — TypeScript, Python, Rust, Go, Java, C#, C++, Ruby
+- **11-language semantic diff** — TypeScript, Python, Rust, Go, Java, C#, C++, Ruby, PHP, Kotlin, Swift
 - **Incremental import** — `aig import` is now safe to run multiple times
 
 ## What's Coming
 
-Next up: semantic merge engine, trust scoring, TUI review interface, and more. See the full [Roadmap](/roadmap) for the path from MVP to git-equivalent ecosystem.
+Trust scoring, TUI review, and LLM-powered explanations are shipped. Next up: semantic merge engine, web UI, and IDE extensions. See the full [Roadmap](/roadmap) for details.

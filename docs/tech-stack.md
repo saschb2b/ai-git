@@ -112,5 +112,12 @@ Built and tested on Linux, macOS, and Windows. Cross-compilation via Cargo + Git
 | Python | `tree-sitter-python` | functions, classes |
 | Rust | `tree-sitter-rust` | functions, structs, enums, impls, traits, types |
 | Go | `tree-sitter-go` | functions, methods, types |
+| Java | `tree-sitter-java` | classes, interfaces, methods, constructors, enums |
+| C# | `tree-sitter-c-sharp` | classes, interfaces, methods, structs, enums, constructors |
+| C++ | `tree-sitter-cpp` | functions, classes, structs, enums, templates |
+| Ruby | `tree-sitter-ruby` | methods, classes, modules |
+| PHP | `tree-sitter-php` | functions, methods, classes, interfaces, traits, enums |
+| Kotlin | `tree-sitter-kotlin-ng` | functions, classes, objects |
+| Swift | `tree-sitter-swift` | functions, classes, protocols, type aliases |
 
 Other languages fall back gracefully to line-based diffing.
