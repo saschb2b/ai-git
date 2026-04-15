@@ -60,6 +60,20 @@ impl Database {
                 details TEXT
             );
 
+            CREATE TABLE IF NOT EXISTS releases (
+                id TEXT PRIMARY KEY,
+                tag TEXT UNIQUE,
+                title TEXT,
+                created_at TEXT,
+                previous_tag TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS release_intents (
+                release_id TEXT,
+                intent_id TEXT,
+                PRIMARY KEY (release_id, intent_id)
+            );
+
             CREATE TABLE IF NOT EXISTS provenance (
                 id TEXT PRIMARY KEY,
                 checkpoint_id TEXT,

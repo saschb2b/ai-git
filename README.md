@@ -105,6 +105,8 @@ git push && aig push
 | Remote sync | `aig push / pull` | Share intent metadata via git notes |
 | Git hooks | `aig hooks install` | Auto-checkpoint, auto-session, auto-sync |
 | File watching | `aig watch` | Auto-checkpoint after quiet periods |
+| Releases | `aig release <tag>` | Tag a release grouping intents since the last one |
+| Changelog | `aig changelog` | Auto-generate release notes from intents |
 | Portable backup | `aig export` | Bundle `.aig` metadata for backup or migration |
 
 ## Installation

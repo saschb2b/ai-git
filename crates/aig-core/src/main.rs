@@ -128,6 +128,19 @@ enum Commands {
         /// File path or intent ID to mark as reviewed
         target: String,
     },
+    /// Create a release from completed intents
+    Release {
+        /// Tag name (e.g., v0.2.0)
+        tag: String,
+        /// Release title (defaults to tag name)
+        #[arg(long)]
+        title: Option<String>,
+    },
+    /// Generate a changelog from intent history
+    Changelog {
+        /// Range in the form "v0.1.0..v0.2.0" (omit for latest release)
+        range: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -196,6 +209,8 @@ fn main() {
         },
         Commands::Trust { file } => cmd_trust(file.as_deref()),
         Commands::Reviewed { target } => cmd_reviewed(&target),
+        Commands::Release { tag, title } => cmd_release(&tag, title.as_deref()),
+        Commands::Changelog { range } => cmd_changelog(range.as_deref()),
     };
 
     if let Err(e) = result {
@@ -1498,6 +1513,285 @@ fn cmd_reviewed(target: &str) -> anyhow::Result<()> {
         println!("Marked {updated} region(s) for intent {target} as reviewed");
     } else {
         println!("No unreviewed provenance found for {target}");
+    }
+
+    Ok(())
+}
+
+// ── Releases & changelog ────────────────────────────────────────────────
+
+fn cmd_release(tag: &str, title: Option<&str>) -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+    let db = Database::new()?;
+    let repo = git_interop::open_repo(".")?;
+    let now = chrono::Utc::now().to_rfc3339();
+
+    // Check tag doesn't already exist in aig
+    let existing: Option<String> = db
+        .conn
+        .query_row(
+            "SELECT id FROM releases WHERE tag = ?1",
+            rusqlite::params![tag],
+            |row| row.get(0),
+        )
+        .ok();
+    if existing.is_some() {
+        anyhow::bail!("release {tag} already exists");
+    }
+
+    // Find the previous release to scope which intents are new
+    let previous_tag: Option<String> = db
+        .conn
+        .query_row(
+            "SELECT tag FROM releases ORDER BY created_at DESC LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .ok();
+
+    let previous_release_time: Option<String> = previous_tag.as_ref().and_then(|pt| {
+        db.conn
+            .query_row(
+                "SELECT created_at FROM releases WHERE tag = ?1",
+                rusqlite::params![pt],
+                |row| row.get(0),
+            )
+            .ok()
+    });
+
+    // Find intents that were created/closed since the last release
+    let intents: Vec<(String, String)> = if let Some(ref since) = previous_release_time {
+        let mut stmt = db.conn.prepare(
+            "SELECT id, description FROM intents
+             WHERE created_at > ?1 OR closed_at > ?1
+             ORDER BY created_at",
+        )?;
+        let rows = stmt.query_map(rusqlite::params![since], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+        rows.collect::<Result<Vec<_>, _>>()?
+    } else {
+        // First release — include all intents
+        let mut stmt = db
+            .conn
+            .prepare("SELECT id, description FROM intents ORDER BY created_at")?;
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+        rows.collect::<Result<Vec<_>, _>>()?
+    };
+
+    // Generate release ID
+    let release_id = {
+        use sha2::{Digest, Sha256};
+        let input = format!("release-{tag}-{now}");
+        let mut hasher = Sha256::new();
+        hasher.update(input.as_bytes());
+        hex::encode(&hasher.finalize()[..16])
+    };
+
+    let display_title = title.unwrap_or(tag);
+
+    // Insert release record
+    db.conn.execute(
+        "INSERT INTO releases (id, tag, title, created_at, previous_tag) VALUES (?1, ?2, ?3, ?4, ?5)",
+        rusqlite::params![release_id, tag, display_title, now, previous_tag],
+    )?;
+
+    // Link intents to release
+    for (intent_id, _) in &intents {
+        db.conn.execute(
+            "INSERT OR IGNORE INTO release_intents (release_id, intent_id) VALUES (?1, ?2)",
+            rusqlite::params![release_id, intent_id],
+        )?;
+    }
+
+    // Create git tag
+    let head = repo.head()?.peel_to_commit()?;
+    repo.tag_lightweight(tag, head.as_object(), false)?;
+
+    println!("Release {display_title} ({tag})");
+    println!("  {} intent(s) included", intents.len());
+    if let Some(ref prev) = previous_tag {
+        println!("  since: {prev}");
+    }
+    for (id, desc) in &intents {
+        let short = &id[..8];
+        println!("  [{short}] {desc}");
+    }
+    println!("\nTag {tag} created. Push with: git push --tags && aig push");
+
+    Ok(())
+}
+
+fn cmd_changelog(range: Option<&str>) -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+    let db = Database::new()?;
+
+    // Parse range or use latest release
+    let (from_tag, to_tag) = if let Some(r) = range {
+        let parts: Vec<&str> = r.split("..").collect();
+        if parts.len() != 2 {
+            anyhow::bail!("range must be in the form \"v0.1.0..v0.2.0\"");
+        }
+        (Some(parts[0].to_string()), parts[1].to_string())
+    } else {
+        // Latest release
+        let tag: String = db
+            .conn
+            .query_row(
+                "SELECT tag FROM releases ORDER BY created_at DESC LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(|_| {
+                anyhow::anyhow!("no releases found. Create one with: aig release <tag>")
+            })?;
+        let prev: Option<String> = db
+            .conn
+            .query_row(
+                "SELECT previous_tag FROM releases WHERE tag = ?1",
+                rusqlite::params![tag],
+                |row| row.get(0),
+            )
+            .ok();
+        (prev, tag)
+    };
+
+    // Get the release
+    let (release_title, release_date): (String, String) = db.conn.query_row(
+        "SELECT title, created_at FROM releases WHERE tag = ?1",
+        rusqlite::params![to_tag],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+
+    let release_id: String = db.conn.query_row(
+        "SELECT id FROM releases WHERE tag = ?1",
+        rusqlite::params![to_tag],
+        |row| row.get(0),
+    )?;
+
+    // Get intents in this release
+    let mut stmt = db.conn.prepare(
+        "SELECT i.id, i.description, i.closed_at
+         FROM intents i
+         JOIN release_intents ri ON i.id = ri.intent_id
+         WHERE ri.release_id = ?1
+         ORDER BY i.created_at",
+    )?;
+    let intents: Vec<(String, String, Option<String>)> = stmt
+        .query_map(rusqlite::params![release_id], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // Print changelog
+    let date = format_datetime(&release_date);
+    let from_str = from_tag
+        .as_deref()
+        .map(|t| format!(" (since {t})"))
+        .unwrap_or_default();
+    println!("## {release_title}{from_str}");
+    println!();
+    println!("*{date}*");
+    println!();
+
+    if intents.is_empty() {
+        println!("No intents recorded for this release.");
+        return Ok(());
+    }
+
+    // Group semantic changes by intent
+    for (intent_id, description, _closed) in &intents {
+        let short_id = &intent_id[..8];
+        println!("### [{short_id}] {description}");
+        println!();
+
+        // Get checkpoints for this intent
+        let mut cp_stmt = db
+            .conn
+            .prepare("SELECT id FROM checkpoints WHERE intent_id = ?1 ORDER BY created_at")?;
+        let cp_ids: Vec<String> = cp_stmt
+            .query_map(rusqlite::params![intent_id], |row| row.get(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        // Get semantic changes across all checkpoints
+        if !cp_ids.is_empty() {
+            let placeholders: String = cp_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+            let query = format!(
+                "SELECT DISTINCT file_path, change_type, symbol_name
+                 FROM semantic_changes WHERE checkpoint_id IN ({placeholders})
+                 ORDER BY file_path, symbol_name"
+            );
+            let mut sc_stmt = db.conn.prepare(&query)?;
+            let params: Vec<&dyn rusqlite::types::ToSql> = cp_ids
+                .iter()
+                .map(|id| id as &dyn rusqlite::types::ToSql)
+                .collect();
+            let changes: Vec<(String, String, String)> = sc_stmt
+                .query_map(params.as_slice(), |row| {
+                    Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+
+            if !changes.is_empty() {
+                for (file, change_type, symbol) in &changes {
+                    let icon = change_type_icon(change_type);
+                    println!("- {icon} {change_type} `{symbol}` ({file})");
+                }
+                println!();
+            }
+        }
+    }
+
+    // Trust summary
+    let (total_regions, ai_regions, reviewed_regions): (i64, i64, i64) = {
+        let cp_ids_all: Vec<String> = intents
+            .iter()
+            .flat_map(|(intent_id, _, _)| {
+                let mut s = db
+                    .conn
+                    .prepare("SELECT id FROM checkpoints WHERE intent_id = ?1")
+                    .ok();
+                s.as_mut()
+                    .map(|stmt| {
+                        stmt.query_map(rusqlite::params![intent_id], |row| row.get::<_, String>(0))
+                            .ok()
+                            .map(|rows| rows.filter_map(|r| r.ok()).collect::<Vec<_>>())
+                            .unwrap_or_default()
+                    })
+                    .unwrap_or_default()
+            })
+            .collect();
+
+        if cp_ids_all.is_empty() {
+            (0, 0, 0)
+        } else {
+            let placeholders: String = cp_ids_all.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+            let query = format!(
+                "SELECT COUNT(*),
+                        SUM(CASE WHEN origin = 'ai-assisted' THEN 1 ELSE 0 END),
+                        SUM(CASE WHEN reviewed = 1 THEN 1 ELSE 0 END)
+                 FROM provenance WHERE checkpoint_id IN ({placeholders})"
+            );
+            let mut stmt = db.conn.prepare(&query)?;
+            let params: Vec<&dyn rusqlite::types::ToSql> = cp_ids_all
+                .iter()
+                .map(|id| id as &dyn rusqlite::types::ToSql)
+                .collect();
+            stmt.query_row(params.as_slice(), |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(1).unwrap_or(0),
+                    row.get::<_, i64>(2).unwrap_or(0),
+                ))
+            })?
+        }
+    };
+
+    if total_regions > 0 {
+        let human_regions = total_regions - ai_regions;
+        println!("**Trust:** {human_regions} human, {ai_regions} AI-assisted, {reviewed_regions}/{total_regions} reviewed");
     }
 
     Ok(())

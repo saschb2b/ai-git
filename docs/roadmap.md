@@ -30,6 +30,7 @@ The foundation is in place. These features are shipped and working:
 | LLM explanations | `aig why --explain` | Working |
 | Interactive TUI | `aig review --tui` | Working |
 | Git hooks | `aig hooks install/remove` | Working |
+| Releases & changelog | `aig release`, `aig changelog` | Working |
 | One-command onboarding | `aig init --import` | Working |
 | Installation | `cargo install --git` or GitHub Releases | Working |
 
@@ -58,6 +59,9 @@ When two developers (or two AI agents) modify the same file, git produces text-l
 
 ### ~~LLM-powered `aig why`~~ — Shipped
 `aig why file:line --explain` synthesizes a natural-language explanation from the intent, checkpoint, conversation notes, and semantic changes. Without `--explain`, the raw metadata is shown as before. Requires the `@aig/llm` package.
+
+### ~~Releases and changelog~~ — Shipped
+`aig release <tag>` creates a git tag and groups all intents since the last release into a named release. `aig changelog [from..to]` generates markdown release notes from intent descriptions and semantic changes, with trust summary.
 
 ### ~~Broader language support~~ — Shipped
 Semantic diff now supports 11 languages: TypeScript/JavaScript, Python, Rust, Go, Java, C#, C++, Ruby, PHP, Kotlin, and Swift. The infrastructure supports any language with a tree-sitter grammar.

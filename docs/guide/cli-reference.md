@@ -36,6 +36,8 @@ Commands:
   hooks         Install or remove git hooks for automatic aig tracking
   trust         Show trust and provenance information for files
   reviewed      Mark a file or intent as human-reviewed
+  release       Create a release from completed intents
+  changelog     Generate a changelog from intent history
   help          Print this message or the help of the given subcommand(s)
 
 Options:
@@ -301,6 +303,39 @@ Arguments:
 Options:
   -h, --help  Print help
 ```
+
+### `aig release`
+
+```
+Create a release from completed intents
+
+Usage: aig release [OPTIONS] <TAG>
+
+Arguments:
+  <TAG>  Tag name (e.g., v0.2.0)
+
+Options:
+      --title <TITLE>  Release title (defaults to tag name)
+  -h, --help           Print help
+```
+
+Creates a git tag and records a release that groups all intents since the last release. Outputs a summary of included intents.
+
+### `aig changelog`
+
+```
+Generate a changelog from intent history
+
+Usage: aig changelog [RANGE]
+
+Arguments:
+  [RANGE]  Range in the form "v0.1.0..v0.2.0" (omit for latest release)
+
+Options:
+  -h, --help  Print help
+```
+
+Generates a markdown changelog from intent descriptions and semantic changes. Groups changes by intent with per-symbol detail.
 
 ## Supported Languages (Semantic Diff)
 
