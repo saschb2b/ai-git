@@ -397,6 +397,18 @@ pub fn import_git_history(repo_path: &str) -> Result<()> {
 
         let intent_id = intent::create_intent(&db, &final_intent)?;
 
+        // Set created_at to the oldest commit in the cluster
+        let first_commit_time = new_in_cluster
+            .first()
+            .and_then(|c| chrono::DateTime::from_timestamp(c.timestamp, 0))
+            .map(|dt| dt.to_rfc3339())
+            .unwrap_or_else(|| Utc::now().to_rfc3339());
+
+        db.conn.execute(
+            "UPDATE intents SET created_at = ?1 WHERE id = ?2",
+            rusqlite::params![first_commit_time, intent_id],
+        )?;
+
         // Optionally store the summary on the intent
         if !final_summary.is_empty() {
             db.conn.execute(
