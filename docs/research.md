@@ -80,6 +80,20 @@ Instead of manual commits, the system captures state continuously. Developers "c
 - **Knowledge propagation** — share discoveries across AI sessions
 - **Role-based views** — developers see semantic diffs, PMs see intent progress, auditors see provenance
 
+## Open Questions
+
+### Session ceremony vs. quick fixes
+
+Sessions (`aig session start` → `checkpoint` → `session end`) work well for multi-step features — they group checkpoints under a named intent and capture the full narrative. But what about small bug fixes, typo corrections, or one-liner changes? They still have intent, but a full session feels like overhead.
+
+The tension:
+
+- **If `aig checkpoint` works without a session** and auto-creates a one-shot intent, how does it differ from `git commit`? The semantic diff, conversation capture, and trust metadata still add value — but the workflow feels nearly identical.
+- **If we keep sessions mandatory**, quick fixes require three commands (`start`, `checkpoint`, `end`) for what should be a single action.
+- **A middle ground** — something like `aig quick "Fix off-by-one"` that creates a session, checkpoints, and closes in one step — keeps the data model clean (every change has an intent) while making the UX lightweight. This could also be handled by the `/aig` Claude Code skill without adding a native command.
+
+Unresolved: is the right answer a native command, a skill-level shortcut, or a rethink of what "session" means? Does every change *need* to be wrapped in a session, or should intents be a broader concept that sessions are just one way to create?
+
 ---
 
 *Read the full research document: [RESEARCH.md on GitHub](https://github.com/saschb2b/ai-git/blob/main/RESEARCH.md)*
