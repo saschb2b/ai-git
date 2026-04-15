@@ -259,6 +259,84 @@ aig hooks remove
 
 Hooks never overwrite existing non-aig hooks, and failures don't block git operations.
 
+## Releases and Changelogs
+
+When you're ready to ship, aig can turn your intent history into a proper release with auto-generated release notes. No more scraping `git log` for changelog entries.
+
+### Creating a release
+
+```bash
+aig release v1.2.0 --title "Add payment processing"
+```
+
+```
+Release Add payment processing (v1.2.0)
+  3 intent(s) included
+  since: v1.1.0
+  [a3f1b2c4] Add Stripe payment flow
+  [d7e8f9a0] Fix checkout race condition
+  [b1c2d3e4] Add payment webhook retry logic
+
+Tag v1.2.0 created. Push with: git push --tags && aig push
+```
+
+This creates a git tag *and* records which intents are part of this release. The release knows everything that shipped — not just commits, but the goals, conversations, and semantic changes behind them.
+
+### Generating a changelog
+
+```bash
+aig changelog
+```
+
+```
+## Add payment processing (since v1.1.0)
+
+*2026-04-15 14:30*
+
+### [a3f1b2c4] Add Stripe payment flow
+
+- + added `create_payment_intent` (src/payments.py)
+- + added `handle_webhook` (src/webhooks.py)
+- ~ modified `checkout` (src/cart.py)
+
+### [d7e8f9a0] Fix checkout race condition
+
+- ~ modified `process_order` (src/orders.py)
+- + added `acquire_lock` (src/orders.py)
+
+### [b1c2d3e4] Add payment webhook retry logic
+
+- + added `retry_webhook` (src/webhooks.py)
+- ~ modified `handle_webhook` (src/webhooks.py)
+
+**Trust:** 8 human, 3 AI-assisted, 9/11 reviewed
+```
+
+Every entry is an intent — not a commit hash, but a human-readable description of what was accomplished. Semantic changes show exactly which functions were added or modified. The trust summary tells you how much was AI-assisted and how much has been reviewed.
+
+### Comparing releases
+
+```bash
+aig changelog "v1.0.0..v1.2.0"    # specific range
+aig changelog                      # latest release (default)
+```
+
+### Why this matters
+
+Compare this to a typical `git log` changelog:
+
+```
+# git log --oneline v1.1.0..v1.2.0
+f8a2b3c Fix test
+d4e5f6a WIP
+a1b2c3d Add stripe
+e7f8a9b Fix lint
+b0c1d2e More payment stuff
+c3d4e5f Webhook handler
+```
+
+Six commits that tell you nothing. With aig, the same work becomes three intents with structural detail, trust information, and a clear narrative of what shipped and why.
+
 ## Quick Reference: Daily Commands
 
 | When | Command |
@@ -279,4 +357,6 @@ Hooks never overwrite existing non-aig hooks, and failures don't block git opera
 | Mark code as reviewed | `aig reviewed <file or intent>` |
 | LLM explanation | `aig why file:line --explain` |
 | Interactive review | `aig review --tui` |
+| Create a release | `aig release v1.0.0 --title "Launch"` |
+| Generate changelog | `aig changelog` |
 | Backup/restore metadata | `aig export` / `aig import-bundle <file>` |

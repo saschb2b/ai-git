@@ -277,6 +277,8 @@ No more guessing why a line exists. The full context --- from high-level intent 
 | `aig hooks install / remove` | Install/remove git hooks for automatic tracking |
 | `aig trust [file]` | Show trust and provenance (human vs AI-assisted) |
 | `aig reviewed <target>` | Mark a file or intent as human-reviewed |
+| `aig release <tag>` | Create a release grouping intents since the last tag |
+| `aig changelog [from..to]` | Auto-generate release notes from intents |
 | `aig export [output]` | Export .aig metadata to a portable bundle |
 | `aig import-bundle <path>` | Import .aig metadata from a bundle |
 | `aig repair` | Re-attach metadata after rebase/cherry-pick |
