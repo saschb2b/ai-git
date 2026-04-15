@@ -5,8 +5,6 @@ import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
 import Chip from "@mui/material/Chip";
 import LinearProgress from "@mui/material/LinearProgress";
 import Card from "@mui/material/Card";
@@ -15,20 +13,16 @@ import Stack from "@mui/material/Stack";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Link from "@mui/material/Link";
 import Collapse from "@mui/material/Collapse";
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import SearchIcon from "@mui/icons-material/Search";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import PersonIcon from "@mui/icons-material/Person";
-import SmartToyIcon from "@mui/icons-material/SmartToy";
 import { useState } from "react";
 import { StatusChip } from "../components/StatusChip";
 import { IntentDiffViewer, CommitDiffViewer } from "../components/DiffViewer";
+import { ConversationView } from "../components/ConversationView";
 import { useApi } from "../hooks/useApi";
 
 interface IntentDetail {
@@ -89,90 +83,11 @@ function TabPanel({
   return <Box sx={{ py: 2 }}>{children}</Box>;
 }
 
-/** Guess if a conversation message is from a human or AI based on content heuristics */
-function guessRole(message: string): "human" | "assistant" {
-  // Claude Code captures typically alternate, but we can heuristic:
-  // - Short messages, questions, commands → human
-  // - Long messages with code blocks, explanations → assistant
-  if (message.length < 200 && !message.includes("```") && !message.includes("function ") && !message.includes("import ")) {
-    return "human";
-  }
-  return "assistant";
-}
-
-function ConversationMessage({
-  message,
-  timestamp,
-}: {
-  message: string;
-  timestamp: string;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const role = guessRole(message);
-  const isLong = message.length > 500;
-  const displayText = isLong && !expanded ? message.slice(0, 400) + "..." : message;
-
-  return (
-    <ListItem
-      sx={{
-        alignItems: "flex-start",
-        px: { xs: 1, sm: 2 },
-        py: 1,
-        borderBottom: "1px solid rgba(255,255,255,0.04)",
-        bgcolor: role === "human" ? "rgba(100, 108, 255, 0.03)" : "transparent",
-      }}
-    >
-      <Box sx={{ mr: 1.5, mt: 0.5, color: role === "human" ? "#646cff" : "#8b949e" }}>
-        {role === "human" ? <PersonIcon sx={{ fontSize: 18 }} /> : <SmartToyIcon sx={{ fontSize: 18 }} />}
-      </Box>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.3 }}>
-          <Typography fontSize="0.72rem" fontWeight={600} color={role === "human" ? "primary.main" : "text.secondary"}>
-            {role === "human" ? "You" : "Assistant"}
-          </Typography>
-          <Typography fontSize="0.68rem" color="text.disabled">
-            {new Date(timestamp).toLocaleTimeString()}
-          </Typography>
-        </Stack>
-        <Typography
-          fontSize="0.82rem"
-          sx={{
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            color: "text.primary",
-            "& code": {
-              bgcolor: "rgba(100,108,255,0.08)",
-              px: 0.5,
-              borderRadius: "3px",
-              fontSize: "0.78rem",
-              fontFamily: "monospace",
-            },
-          }}
-        >
-          {displayText}
-        </Typography>
-        {isLong && (
-          <Typography
-            component="span"
-            fontSize="0.75rem"
-            color="primary.main"
-            sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? "Show less" : "Show more"}
-          </Typography>
-        )}
-      </Box>
-    </ListItem>
-  );
-}
-
 export function IntentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data, loading, error, refetch } = useApi<IntentDetail>(`/api/intents/${id}`);
   const [tab, setTab] = useState(0);
   const [expandedCps, setExpandedCps] = useState<Set<string>>(new Set());
-  const [convSearch, setConvSearch] = useState("");
   const navigate = useNavigate();
 
   if (loading) {
@@ -218,11 +133,6 @@ export function IntentDetailPage() {
     : intent.closed_at
       ? formatDuration(intent.created_at, intent.closed_at)
       : null;
-
-  // Filter conversations
-  const filteredConvs = convSearch
-    ? conversations.filter((c) => c.message.toLowerCase().includes(convSearch.toLowerCase()))
-    : conversations;
 
   return (
     <>
@@ -391,41 +301,9 @@ export function IntentDetailPage() {
         <IntentDiffViewer intentId={intent.id} active={tab === 1} />
       </TabPanel>
 
-      {/* Conversations tab — with role icons, collapsible long messages, search */}
+      {/* Conversations tab */}
       <TabPanel value={tab} index={2}>
-        {conversations.length > 5 && (
-          <TextField
-            size="small"
-            placeholder="Search conversations..."
-            value={convSearch}
-            onChange={(e) => setConvSearch(e.target.value)}
-            sx={{ mb: 2, width: { xs: "100%", sm: 300 } }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-        )}
-        {convSearch && (
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
-            {filteredConvs.length} of {conversations.length} messages
-          </Typography>
-        )}
-        <List sx={{ maxHeight: "70vh", overflow: "auto", bgcolor: "background.paper", borderRadius: 1, border: "1px solid rgba(255,255,255,0.06)" }}>
-          {filteredConvs.map((c) => (
-            <ConversationMessage key={c.id} message={c.message} timestamp={c.created_at} />
-          ))}
-          {filteredConvs.length === 0 && (
-            <Typography color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-              {convSearch ? "No matching messages." : "No conversations recorded."}
-            </Typography>
-          )}
-        </List>
+        <ConversationView conversations={conversations} />
       </TabPanel>
 
       {/* Trust tab — responsive cards */}

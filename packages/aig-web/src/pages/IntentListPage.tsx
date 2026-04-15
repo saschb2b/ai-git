@@ -22,7 +22,7 @@ const columns: GridColDef<IntentListItem>[] = [
   {
     field: "status",
     headerName: "",
-    width: 70,
+    width: 90,
     sortable: false,
     renderCell: (params) => (
       <StatusChip closed={params.row.closed_at !== null} />
