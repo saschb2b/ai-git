@@ -6,10 +6,13 @@
 
 $ErrorActionPreference = "Stop"
 
+# Force TLS 1.2 (required for GitHub)
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 $Repo = "saschb2b/ai-git"
 $Asset = "aig-x86_64-windows.zip"
 $Url = "https://github.com/$Repo/releases/latest/download/$Asset"
-$InstallDir = "$env:USERPROFILE\.aig\bin"
+$InstallDir = Join-Path $env:USERPROFILE ".aig\bin"
 
 Write-Host ""
 Write-Host "  aig installer" -ForegroundColor White
@@ -19,13 +22,19 @@ Write-Host ""
 # --- Download ---
 
 Write-Host "> Downloading $Asset..." -ForegroundColor Cyan
-$TmpDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
+$TmpDir = Join-Path ([System.IO.Path]::GetTempPath()) "aig-install-$([System.Guid]::NewGuid().ToString('N').Substring(0,8))"
+New-Item -ItemType Directory -Path $TmpDir -Force | Out-Null
 $ZipPath = Join-Path $TmpDir $Asset
 
 try {
-    Invoke-WebRequest -Uri $Url -OutFile $ZipPath -UseBasicParsing
+    # Use WebClient — handles GitHub's double redirect better than Invoke-WebRequest
+    $wc = New-Object System.Net.WebClient
+    $wc.DownloadFile($Url, $ZipPath)
 } catch {
-    Write-Host "error: download failed - check https://github.com/$Repo/releases" -ForegroundColor Red
+    Write-Host "error: download failed" -ForegroundColor Red
+    Write-Host "  $_" -ForegroundColor Red
+    Write-Host "  Check https://github.com/$Repo/releases for manual download" -ForegroundColor DarkGray
+    Read-Host "Press Enter to exit"
     exit 1
 }
 
@@ -40,8 +49,17 @@ if (-not (Test-Path $InstallDir)) {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 }
 
-Move-Item -Path (Join-Path $TmpDir "aig.exe") -Destination (Join-Path $InstallDir "aig.exe") -Force
-Write-Host "> Installed to $InstallDir\aig.exe" -ForegroundColor Green
+$ExeSrc = Join-Path $TmpDir "aig.exe"
+$ExeDst = Join-Path $InstallDir "aig.exe"
+
+if (-not (Test-Path $ExeSrc)) {
+    Write-Host "error: aig.exe not found in archive" -ForegroundColor Red
+    Read-Host "Press Enter to exit"
+    exit 1
+}
+
+Move-Item -Path $ExeSrc -Destination $ExeDst -Force
+Write-Host "> Installed to $ExeDst" -ForegroundColor Green
 
 # --- Add to PATH if needed ---
 
@@ -55,7 +73,7 @@ if ($CurrentPath -notlike "*$InstallDir*") {
 
 # --- Clean up ---
 
-Remove-Item -Recurse -Force $TmpDir
+Remove-Item -Recurse -Force $TmpDir -ErrorAction SilentlyContinue
 
 # --- Done ---
 
