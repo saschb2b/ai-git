@@ -165,10 +165,8 @@ fn record_semantic_changes(
                 git2::Delta::Deleted => "deleted",
                 _ => "modified",
             };
-            let id = CheckpointManager::generate_id(&format!(
-                "{}-{}-file",
-                checkpoint_id, file_path
-            ));
+            let id =
+                CheckpointManager::generate_id(&format!("{}-{}-file", checkpoint_id, file_path));
             db.conn.execute(
                 "INSERT INTO semantic_changes (id, checkpoint_id, file_path, change_type, symbol_name, details) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 rusqlite::params![

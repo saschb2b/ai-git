@@ -222,16 +222,9 @@ fn definition_node_kinds(lang: Language) -> &'static [(&'static str, &'static st
             ("script_element", "script"),
             ("style_element", "style"),
         ],
-        Language::Json => &[
-            ("pair", "property"),
-        ],
-        Language::Yaml => &[
-            ("block_mapping_pair", "key"),
-        ],
-        Language::Toml => &[
-            ("table", "section"),
-            ("pair", "key"),
-        ],
+        Language::Json => &[("pair", "property")],
+        Language::Yaml => &[("block_mapping_pair", "key")],
+        Language::Toml => &[("table", "section"), ("pair", "key")],
         Language::Bash => &[
             ("function_definition", "function"),
             ("variable_assignment", "variable"),
