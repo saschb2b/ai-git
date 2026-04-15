@@ -159,6 +159,27 @@ fn record_semantic_changes(
 
         let lang = aig_treesitter::detect_language(&file_path);
         if lang == aig_treesitter::Language::Unknown {
+            // Record file-level change for unsupported languages
+            let change_type = match delta.status() {
+                git2::Delta::Added => "added",
+                git2::Delta::Deleted => "deleted",
+                _ => "modified",
+            };
+            let id = CheckpointManager::generate_id(&format!(
+                "{}-{}-file",
+                checkpoint_id, file_path
+            ));
+            db.conn.execute(
+                "INSERT INTO semantic_changes (id, checkpoint_id, file_path, change_type, symbol_name, details) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                rusqlite::params![
+                    id,
+                    checkpoint_id,
+                    file_path,
+                    change_type,
+                    file_path,
+                    format!("{} file {}", change_type, file_path),
+                ],
+            )?;
             continue;
         }
 
