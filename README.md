@@ -102,7 +102,7 @@ git push && aig push
 |---------|---------|-------------|
 | Intent tracking | `aig session start/end` | Declare goals before writing code |
 | Smart checkpoints | `aig checkpoint` | Git commit + semantic analysis, auto-generated messages |
-| Semantic diff | `aig diff --semantic` | AST-level changes across 11 languages |
+| Semantic diff | `aig diff --semantic` | AST-level changes across 27 languages |
 | Line provenance | `aig why file:line` | Trace any line to its intent and conversation |
 | LLM explanations | `aig why --explain` | Natural-language synthesis of why code exists |
 | Trust scoring | `aig trust [file]` | Track human vs AI-authored code regions |
@@ -155,9 +155,9 @@ cargo build --release
 
 **Requirements:** Rust 1.75+ and an existing git repository. Node.js 20+ is optional (needed for LLM-powered import and TUI review).
 
-## Semantic diff: 11 languages
+## Semantic diff: 27 languages
 
-TypeScript/JS, Python, Rust, Go, Java, C#, C++, Ruby, PHP, Kotlin, Swift. All other languages fall back to line-based diffing automatically.
+TypeScript, JavaScript, Python, Rust, Go, Java, C#, C++, C, Ruby, PHP, Kotlin, Swift, CSS, HTML, JSON, YAML, TOML, Bash, Lua, Scala, Elixir, Haskell, Zig, Dart, Markdown, plus Vue/Svelte via HTML grammar. All other file types get file-level change tracking automatically.
 
 ## Documentation
 
@@ -173,9 +173,10 @@ TypeScript/JS, Python, Rust, Go, Java, C#, C++, Ruby, PHP, Kotlin, Swift. All ot
 
 ```
 crates/aig-core/          Rust CLI + library (21 commands)
-crates/aig-treesitter/    Semantic diff engine (11 languages, tree-sitter)
+crates/aig-treesitter/    Semantic diff engine (27 languages, tree-sitter)
 packages/aig-llm/         LLM integration (TypeScript, Anthropic Claude)
 packages/aig-tui/         Interactive TUI (TypeScript, React/Ink)
+packages/aig-web/         Web UI (React, MUI, Vite)
 docs/                     VitePress documentation site
 ```
 
