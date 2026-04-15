@@ -36,10 +36,22 @@ export function registerApiRoutes(app: Express) {
     const checkpoints = db.getCheckpoints(intent.id);
     const cpIds = checkpoints.map((c) => c.id);
     const semanticChanges = db.getSemanticChanges(cpIds);
+    const changesByCheckpoint = db.getSemanticChangesByCheckpoint(cpIds);
     const conversations = db.getConversations(intent.id);
     const provenance = db.getProvenance(intent.id);
+    const session = db.getSessionDuration(intent.id);
+    const filesChanged = db.getFilesChanged(intent.id);
 
-    res.json({ intent, checkpoints, semanticChanges, conversations, provenance });
+    res.json({
+      intent,
+      checkpoints,
+      semanticChanges,
+      changesByCheckpoint,
+      conversations,
+      provenance,
+      session,
+      filesChanged,
+    });
   });
 
   app.get("/api/timeline", (_req, res) => {

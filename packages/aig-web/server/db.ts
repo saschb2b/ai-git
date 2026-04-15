@@ -121,6 +121,52 @@ export class AigDatabase {
       .all(checkpointIds) as SemanticChange[];
   }
 
+  getSemanticChangesByCheckpoint(
+    checkpointIds: string[],
+  ): Record<string, SemanticChange[]> {
+    if (checkpointIds.length === 0) return {};
+    const placeholders = checkpointIds.map(() => "?").join(",");
+    const rows = this.db
+      .prepare(
+        `SELECT sc.checkpoint_id, sc.file_path, sc.change_type, sc.symbol_name
+         FROM semantic_changes sc
+         WHERE sc.checkpoint_id IN (${placeholders})
+         ORDER BY sc.id`,
+      )
+      .all(checkpointIds) as (SemanticChange & { checkpoint_id: string })[];
+
+    const grouped: Record<string, SemanticChange[]> = {};
+    for (const row of rows) {
+      if (!grouped[row.checkpoint_id]) grouped[row.checkpoint_id] = [];
+      grouped[row.checkpoint_id].push({
+        file_path: row.file_path,
+        change_type: row.change_type,
+        symbol_name: row.symbol_name,
+      });
+    }
+    return grouped;
+  }
+
+  getSessionDuration(intentId: string): { started_at: string; ended_at: string | null } | null {
+    return this.db
+      .prepare(
+        "SELECT started_at, ended_at FROM sessions WHERE intent_id = ? ORDER BY started_at LIMIT 1",
+      )
+      .get(intentId) as { started_at: string; ended_at: string | null } | null;
+  }
+
+  getFilesChanged(intentId: string): number {
+    const row = this.db
+      .prepare(
+        `SELECT COUNT(DISTINCT sc.file_path) as count
+         FROM semantic_changes sc
+         JOIN checkpoints c ON sc.checkpoint_id = c.id
+         WHERE c.intent_id = ?`,
+      )
+      .get(intentId) as { count: number };
+    return row?.count ?? 0;
+  }
+
   getConversations(intentId: string): Conversation[] {
     return this.db
       .prepare(
