@@ -11,26 +11,65 @@ pub enum Language {
     Java,
     CSharp,
     Cpp,
+    C,
     Ruby,
     Php,
     Kotlin,
     Swift,
+    Css,
+    Html,
+    Json,
+    Yaml,
+    Toml,
+    Bash,
+    Lua,
+    Scala,
+    Elixir,
+    Haskell,
+    Zig,
+    Dart,
+    Markdown,
     Unknown,
 }
 
 pub fn detect_language(file_path: &str) -> Language {
+    // Handle special filenames first
+    let filename = file_path.rsplit('/').next().unwrap_or(file_path);
+    let filename = filename.rsplit('\\').next().unwrap_or(filename);
+    match filename {
+        "Makefile" | "GNUmakefile" => return Language::Bash,
+        _ => {}
+    }
+
     match file_path.rsplit('.').next() {
-        Some("ts" | "tsx") => Language::TypeScript,
-        Some("py") => Language::Python,
+        Some("ts" | "tsx" | "mts" | "cts") => Language::TypeScript,
+        Some("js" | "jsx" | "mjs" | "cjs") => Language::TypeScript, // JS uses TS grammar
+        Some("py" | "pyi") => Language::Python,
         Some("rs") => Language::Rust,
         Some("go") => Language::Go,
         Some("java") => Language::Java,
         Some("cs") => Language::CSharp,
-        Some("cpp" | "cc" | "cxx" | "hpp" | "h") => Language::Cpp,
-        Some("rb") => Language::Ruby,
+        Some("cpp" | "cc" | "cxx" | "hpp" | "hh" | "hxx") => Language::Cpp,
+        Some("c") => Language::C,
+        Some("h") => Language::Cpp, // Could be C or C++, default to C++
+        Some("rb" | "rake" | "gemspec") => Language::Ruby,
         Some("php") => Language::Php,
         Some("kt" | "kts") => Language::Kotlin,
         Some("swift") => Language::Swift,
+        Some("css" | "scss" | "less") => Language::Css,
+        Some("html" | "htm") => Language::Html,
+        Some("vue" | "svelte") => Language::Html, // Vue/Svelte use HTML-like grammar
+        Some("json" | "jsonc" | "json5") => Language::Json,
+        Some("yaml" | "yml") => Language::Yaml,
+        Some("toml") => Language::Toml,
+        Some("sh" | "bash" | "zsh") => Language::Bash,
+        Some("lua") => Language::Lua,
+        Some("scala" | "sc") => Language::Scala,
+        Some("ex" | "exs") => Language::Elixir,
+        Some("hs" | "lhs") => Language::Haskell,
+        Some("zig") => Language::Zig,
+        Some("dart") => Language::Dart,
+        Some("md" | "mdx" | "markdown") => Language::Markdown,
         _ => Language::Unknown,
     }
 }
@@ -45,10 +84,24 @@ pub fn get_parser(lang: Language) -> Result<tree_sitter::Parser> {
         Language::Java => tree_sitter_java::LANGUAGE.into(),
         Language::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
         Language::Cpp => tree_sitter_cpp::LANGUAGE.into(),
+        Language::C => tree_sitter_c::LANGUAGE.into(),
         Language::Ruby => tree_sitter_ruby::LANGUAGE.into(),
         Language::Php => tree_sitter_php::LANGUAGE_PHP.into(),
         Language::Kotlin => tree_sitter_kotlin_ng::LANGUAGE.into(),
         Language::Swift => tree_sitter_swift::LANGUAGE.into(),
+        Language::Css => tree_sitter_css::LANGUAGE.into(),
+        Language::Html => tree_sitter_html::LANGUAGE.into(),
+        Language::Json => tree_sitter_json::LANGUAGE.into(),
+        Language::Yaml => tree_sitter_yaml::LANGUAGE.into(),
+        Language::Toml => tree_sitter_toml_ng::LANGUAGE.into(),
+        Language::Bash => tree_sitter_bash::LANGUAGE.into(),
+        Language::Lua => tree_sitter_lua::LANGUAGE.into(),
+        Language::Scala => tree_sitter_scala::LANGUAGE.into(),
+        Language::Elixir => tree_sitter_elixir::LANGUAGE.into(),
+        Language::Haskell => tree_sitter_haskell::LANGUAGE.into(),
+        Language::Zig => tree_sitter_zig::LANGUAGE.into(),
+        Language::Dart => tree_sitter_dart::LANGUAGE.into(),
+        Language::Markdown => tree_sitter_md::LANGUAGE.into(),
         Language::Unknown => bail!("cannot create parser for unknown language"),
     };
     parser.set_language(&language)?;
@@ -84,6 +137,7 @@ fn definition_node_kinds(lang: Language) -> &'static [(&'static str, &'static st
             ("type_alias_declaration", "type alias"),
             ("method_definition", "method"),
             ("lexical_declaration", "declaration"),
+            ("export_statement", "export"),
         ],
         Language::Python => &[
             ("function_definition", "function"),
@@ -125,6 +179,12 @@ fn definition_node_kinds(lang: Language) -> &'static [(&'static str, &'static st
             ("enum_specifier", "enum"),
             ("template_declaration", "template"),
         ],
+        Language::C => &[
+            ("function_definition", "function"),
+            ("struct_specifier", "struct"),
+            ("enum_specifier", "enum"),
+            ("type_definition", "typedef"),
+        ],
         Language::Ruby => &[
             ("method", "method"),
             ("class", "class"),
@@ -150,6 +210,69 @@ fn definition_node_kinds(lang: Language) -> &'static [(&'static str, &'static st
             ("protocol_declaration", "protocol"),
             ("typealias_declaration", "type alias"),
         ],
+        Language::Css => &[
+            ("rule_set", "rule"),
+            ("media_statement", "@media"),
+            ("keyframes_statement", "@keyframes"),
+            ("import_statement", "@import"),
+            ("at_rule", "at-rule"),
+        ],
+        Language::Html => &[
+            ("element", "element"),
+            ("script_element", "script"),
+            ("style_element", "style"),
+        ],
+        Language::Json => &[
+            ("pair", "property"),
+        ],
+        Language::Yaml => &[
+            ("block_mapping_pair", "key"),
+        ],
+        Language::Toml => &[
+            ("table", "section"),
+            ("pair", "key"),
+        ],
+        Language::Bash => &[
+            ("function_definition", "function"),
+            ("variable_assignment", "variable"),
+        ],
+        Language::Lua => &[
+            ("function_declaration", "function"),
+            ("function_definition_statement", "function"),
+            ("variable_declaration", "variable"),
+        ],
+        Language::Scala => &[
+            ("function_definition", "function"),
+            ("class_definition", "class"),
+            ("trait_definition", "trait"),
+            ("object_definition", "object"),
+            ("val_definition", "val"),
+        ],
+        Language::Elixir => &[
+            ("call", "function"), // defmodule, def, defp are all "call" nodes
+        ],
+        Language::Haskell => &[
+            ("function", "function"),
+            ("type_alias", "type alias"),
+            ("newtype", "newtype"),
+            ("adt", "data"),
+            ("class", "typeclass"),
+        ],
+        Language::Zig => &[
+            ("FnProto", "function"),
+            ("TestDecl", "test"),
+            ("VarDecl", "variable"),
+        ],
+        Language::Dart => &[
+            ("function_signature", "function"),
+            ("class_definition", "class"),
+            ("method_signature", "method"),
+            ("enum_declaration", "enum"),
+        ],
+        Language::Markdown => &[
+            ("atx_heading", "heading"),
+            ("fenced_code_block", "code block"),
+        ],
         Language::Unknown => &[],
     }
 }
@@ -171,10 +294,26 @@ fn extract_node_name(node: &tree_sitter::Node, source: &[u8]) -> Option<String> 
     for i in 0..child_count {
         if let Some(child) = node.child(i) {
             let kind = child.kind();
-            if kind == "identifier" || kind == "type_identifier" {
+            if kind == "identifier"
+                || kind == "type_identifier"
+                || kind == "tag_name"
+                || kind == "property_name"
+                || kind == "class_name"
+                || kind == "heading_content"
+            {
                 if let Ok(text) = child.utf8_text(source) {
                     return Some(text.to_string());
                 }
+            }
+        }
+    }
+
+    // For CSS selectors, HTML elements, etc: use the first meaningful child text
+    if let Some(first_child) = node.child(0) {
+        if let Ok(text) = first_child.utf8_text(source) {
+            let trimmed = text.trim();
+            if !trimmed.is_empty() && trimmed.len() < 100 {
+                return Some(trimmed.to_string());
             }
         }
     }
@@ -232,6 +371,11 @@ fn collect_definitions(
         if lang == Language::Go && node_kind == "type_declaration" {
             collect_definitions(child, source, kind_map, lang, out);
             continue;
+        }
+
+        // For HTML/Vue/Svelte: descend into element children to find nested elements
+        if lang == Language::Html && (node_kind == "element" || node_kind == "document") {
+            collect_definitions(child, source, kind_map, lang, out);
         }
 
         if let Some(&semantic_kind) = kind_map.get(node_kind) {
