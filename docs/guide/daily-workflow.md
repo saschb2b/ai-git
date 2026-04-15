@@ -87,14 +87,18 @@ aig log             # full intent history
 
 ### Does my AI need to know about aig?
 
-**No.** Your AI assistant (Claude Code, Cursor, Copilot, etc.) writes code as usual. aig works around it:
+**Not required, but it can.** There are two levels of integration:
+
+**Level 1 — Passive (any AI tool).** Your AI writes code as usual. You run aig commands manually:
 
 1. **You** start the session and declare the intent
 2. **The AI** writes code — it doesn't need to know about aig
 3. **You** checkpoint when ready — aig analyzes what the AI changed semantically
 4. **aig** auto-captures AI conversations on session end (Claude Code auto-detected, others via `--file`)
 
-The AI doesn't run aig commands. You do. aig is the wrapper around your AI-assisted workflow, not something the AI integrates with.
+**Level 2 — Active (Claude Code).** With a `CLAUDE.md` file and a `/aig` slash command, Claude Code uses aig directly — starting sessions, writing semantic checkpoint messages, and recording design decisions as part of its workflow. This gives you LLM-enhanced commit messages without building LLM integration into aig itself.
+
+**See the [Claude Code Integration](/guide/claude-code) guide for setup instructions.**
 
 ### What gets captured automatically?
 

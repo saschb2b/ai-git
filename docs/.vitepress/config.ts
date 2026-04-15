@@ -91,6 +91,7 @@ export default defineConfig({
         items: [
           { text: 'Getting Started', link: '/guide/getting-started' },
           { text: 'Daily Workflow', link: '/guide/daily-workflow' },
+          { text: 'Claude Code Integration', link: '/guide/claude-code' },
           { text: 'Migrating from Git', link: '/guide/migration' },
           { text: 'CLI Reference', link: '/guide/cli-reference' },
         ]
