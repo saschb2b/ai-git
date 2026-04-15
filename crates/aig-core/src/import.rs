@@ -13,6 +13,17 @@ use crate::intent;
 // IPC client for optional LLM-powered intent inference
 // ---------------------------------------------------------------------------
 
+/// Context for the `explain_line` IPC command.
+pub struct ExplainLineContext {
+    pub file_path: String,
+    pub line: usize,
+    pub intent_description: String,
+    pub checkpoint_message: String,
+    pub conversation_notes: Vec<String>,
+    pub semantic_changes: Vec<String>,
+    pub line_content: String,
+}
+
 /// A lightweight IPC client that communicates with a TypeScript child process
 /// over NDJSON (newline-delimited JSON) on stdin/stdout.
 pub struct IpcClient {
@@ -110,26 +121,17 @@ impl IpcClient {
     /// Send an `explain_line` request and read the response.
     ///
     /// Returns a natural-language explanation of why a line exists.
-    pub fn explain_line(
-        &mut self,
-        file_path: &str,
-        line: usize,
-        intent_description: &str,
-        checkpoint_message: &str,
-        conversation_notes: &[String],
-        semantic_changes: &[String],
-        line_content: &str,
-    ) -> Result<String> {
+    pub fn explain_line(&mut self, ctx: &ExplainLineContext) -> Result<String> {
         let request = serde_json::json!({
             "command": "explain_line",
             "params": {
-                "file_path": file_path,
-                "line": line,
-                "intent_description": intent_description,
-                "checkpoint_message": checkpoint_message,
-                "conversation_notes": conversation_notes,
-                "semantic_changes": semantic_changes,
-                "line_content": line_content,
+                "file_path": ctx.file_path,
+                "line": ctx.line,
+                "intent_description": ctx.intent_description,
+                "checkpoint_message": ctx.checkpoint_message,
+                "conversation_notes": ctx.conversation_notes,
+                "semantic_changes": ctx.semantic_changes,
+                "line_content": ctx.line_content,
             }
         });
 

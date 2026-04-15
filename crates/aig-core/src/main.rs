@@ -774,15 +774,16 @@ fn cmd_why(location: &str, explain: bool) -> anyhow::Result<()> {
                         })
                         .collect();
 
-                    let explanation = client.explain_line(
-                        file_path,
-                        line_num,
-                        intent_desc,
-                        cp_msg,
-                        &conv_notes,
-                        &sem_strings,
-                        &line_content,
-                    )?;
+                    let ctx = aig_core::import::ExplainLineContext {
+                        file_path: file_path.to_string(),
+                        line: line_num,
+                        intent_description: intent_desc.clone(),
+                        checkpoint_message: cp_msg.clone(),
+                        conversation_notes: conv_notes.clone(),
+                        semantic_changes: sem_strings,
+                        line_content,
+                    };
+                    let explanation = client.explain_line(&ctx)?;
 
                     if line_num > 0 {
                         println!("{}:{}", file_path, line_num);
