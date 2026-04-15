@@ -4,6 +4,7 @@
   "scripts": {
     "dev:docs": "pnpm --filter @aig/docs dev",
     "dev:tui": "pnpm --filter @aig/tui dev",
+    "dev:web": "pnpm --filter @aig/web dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint"
