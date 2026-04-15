@@ -10,13 +10,15 @@ This guide walks you through installing **aig**, initializing it in a project, a
 
 ### One-line install (recommended)
 
+**Linux / macOS:**
+
 ```bash
-# Linux / macOS
 curl -fsSL https://raw.githubusercontent.com/saschb2b/ai-git/main/scripts/install.sh | sh
 ```
 
+**Windows (PowerShell):**
+
 ```powershell
-# Windows (PowerShell)
 irm https://raw.githubusercontent.com/saschb2b/ai-git/main/scripts/install.ps1 | iex
 ```
 
