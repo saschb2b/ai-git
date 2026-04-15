@@ -426,6 +426,18 @@ pub fn import_git_history(repo_path: &str) -> Result<()> {
             )?;
         }
 
+        // Imported intents represent completed historical work — close them
+        let last_commit_time = new_in_cluster
+            .last()
+            .and_then(|c| chrono::DateTime::from_timestamp(c.timestamp, 0))
+            .map(|dt| dt.to_rfc3339())
+            .unwrap_or_else(|| Utc::now().to_rfc3339());
+
+        db.conn.execute(
+            "UPDATE intents SET closed_at = ?1 WHERE id = ?2",
+            rusqlite::params![last_commit_time, intent_id],
+        )?;
+
         new_intents += 1;
         new_commits += new_in_cluster.len();
     }
