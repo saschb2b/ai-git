@@ -94,6 +94,20 @@ The tension:
 
 Unresolved: is the right answer a native command, a skill-level shortcut, or a rethink of what "session" means? Does every change *need* to be wrapped in a session, or should intents be a broader concept that sessions are just one way to create?
 
+### Provenance timing: AI detection happens too late
+
+Currently, `aig checkpoint` decides whether code is "human" or "ai-assisted" by checking if the session has any conversation entries. But conversations are captured on `session end`, *after* all checkpoints are already recorded. This means every checkpoint gets tagged as "human" — even when an AI tool wrote all the code.
+
+The result: a session where Claude Code wrote 100% of the code shows "149 human, 0 AI-assisted" in the trust panel.
+
+Options:
+
+- **Re-tag on session end** — when conversations are captured, retroactively update all provenance entries for that session to "ai-assisted". Quickest fix, no UX change, but the data is wrong until session end.
+- **Detect AI tool presence at checkpoint time** — check if Claude Code (or another AI tool) is currently active (e.g., by checking for running processes or active conversation files), rather than relying on captured conversations.
+- **Session-level flag** — let the user declare `aig session start --ai "Add feature"` to tag the whole session as AI-assisted upfront. Most explicit, but adds friction.
+
+Unresolved: which approach balances accuracy, simplicity, and UX? Is per-line-region provenance even the right granularity, or should trust be tracked at the session or checkpoint level instead?
+
 ---
 
 *Read the full research document: [RESEARCH.md on GitHub](https://github.com/saschb2b/ai-git/blob/main/RESEARCH.md)*
