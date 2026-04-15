@@ -137,7 +137,7 @@ fn definition_node_kinds(lang: Language) -> &'static [(&'static str, &'static st
             ("type_alias_declaration", "type alias"),
             ("method_definition", "method"),
             ("lexical_declaration", "declaration"),
-            ("export_statement", "export"),
+            ("variable_declarator", "variable"),
         ],
         Language::Python => &[
             ("function_definition", "function"),
@@ -369,6 +369,15 @@ fn collect_definitions(
 
         // Go: `type_declaration` wraps one or more `type_spec` children.
         if lang == Language::Go && node_kind == "type_declaration" {
+            collect_definitions(child, source, kind_map, lang, out);
+            continue;
+        }
+
+        // TypeScript/JS: `export_statement` and `lexical_declaration` wrap inner declarations.
+        // Descend into them to find the actual function/class/variable.
+        if lang == Language::TypeScript
+            && (node_kind == "export_statement" || node_kind == "lexical_declaration")
+        {
             collect_definitions(child, source, kind_map, lang, out);
             continue;
         }

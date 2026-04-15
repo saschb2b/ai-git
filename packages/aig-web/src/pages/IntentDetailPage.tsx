@@ -119,7 +119,13 @@ function ChangeChip({ type }: { type: string }) {
   );
 }
 
-function ChangeList({ changes }: { changes: SemanticChange[] }) {
+function ChangeList({
+  changes,
+  showFile = false,
+}: {
+  changes: SemanticChange[];
+  showFile?: boolean;
+}) {
   return (
     <Box sx={{ pl: 1 }}>
       {changes.map((sc, i) => (
@@ -139,21 +145,33 @@ function ChangeList({ changes }: { changes: SemanticChange[] }) {
             fontSize="0.8rem"
             fontFamily="monospace"
             color="text.secondary"
-            sx={{ mr: 1 }}
           >
             {sc.symbol_name}
           </Typography>
-          <Typography
-            component="span"
-            fontSize="0.75rem"
-            color="text.disabled"
-          >
-            {sc.file_path}
-          </Typography>
+          {showFile && (
+            <Typography
+              component="span"
+              fontSize="0.75rem"
+              color="text.disabled"
+              sx={{ ml: 1 }}
+            >
+              {sc.file_path}
+            </Typography>
+          )}
         </Box>
       ))}
     </Box>
   );
+}
+
+/** Deduplicate changes: keep the last state of each symbol per file. */
+function deduplicateChanges(changes: SemanticChange[]): SemanticChange[] {
+  const seen = new Map<string, SemanticChange>();
+  for (const sc of changes) {
+    const key = `${sc.file_path}::${sc.symbol_name}`;
+    seen.set(key, sc);
+  }
+  return Array.from(seen.values());
 }
 
 export function IntentDetailPage() {
@@ -196,8 +214,9 @@ export function IntentDetailPage() {
     });
   };
 
-  // Group semantic changes by file for the Changes tab
-  const changesByFile = semanticChanges.reduce(
+  // Deduplicate and group semantic changes by file for the Changes tab
+  const dedupedChanges = deduplicateChanges(semanticChanges);
+  const changesByFile = dedupedChanges.reduce(
     (acc, sc) => {
       if (!acc[sc.file_path]) acc[sc.file_path] = [];
       acc[sc.file_path].push(sc);
@@ -369,7 +388,7 @@ export function IntentDetailPage() {
               {cpChanges.length > 0 && (
                 <Collapse in={isExpanded}>
                   <Box sx={{ mt: 1, ml: 1 }}>
-                    <ChangeList changes={cpChanges} />
+                    <ChangeList changes={cpChanges} showFile />
                   </Box>
                 </Collapse>
               )}
