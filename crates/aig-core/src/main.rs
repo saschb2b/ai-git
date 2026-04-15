@@ -1272,9 +1272,7 @@ fn cmd_review_tui() -> anyhow::Result<()> {
         .join("index.js");
 
     if !script.exists() {
-        anyhow::bail!(
-            "TUI not installed. Run `pnpm install` in the aig repo to set up @aig/tui."
-        );
+        anyhow::bail!("TUI not installed. Run `pnpm install` in the aig repo to set up @aig/tui.");
     }
 
     let aig_dir = repo_root.join(".aig").to_string_lossy().to_string();

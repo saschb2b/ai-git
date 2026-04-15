@@ -240,8 +240,9 @@ mod tests {
 
         // Verify database
         let conn = Connection::open(".aig/aig.db")?;
-        let value: String =
-            conn.query_row("SELECT value FROM test WHERE id = '1'", [], |row| row.get(0))?;
+        let value: String = conn.query_row("SELECT value FROM test WHERE id = '1'", [], |row| {
+            row.get(0)
+        })?;
         assert_eq!(value, "hello");
 
         // Verify object
@@ -275,10 +276,7 @@ mod tests {
         // Import without force should fail
         let result = import_bundle(&bundle_path, false);
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("already exists"));
+        assert!(result.unwrap_err().to_string().contains("already exists"));
 
         // Import with force should succeed
         import_bundle(&bundle_path, true)?;
