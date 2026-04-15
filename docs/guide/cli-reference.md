@@ -33,6 +33,8 @@ Commands:
   repair        Repair aig metadata after rebase (re-attaches orphaned notes)
   export        Export all .aig metadata to a portable bundle file
   import-bundle Import .aig metadata from a bundle file
+  trust         Show trust and provenance information for files
+  reviewed      Mark a file or intent as human-reviewed
   help          Print this message or the help of the given subcommand(s)
 
 Options:
@@ -246,6 +248,34 @@ Arguments:
 Options:
       --force  Overwrite existing .aig directory if present
   -h, --help   Print help
+```
+
+### `aig trust`
+
+```
+Show trust and provenance information for files
+
+Usage: aig trust [FILE]
+
+Arguments:
+  [FILE]  File path to inspect (omit for project-wide summary)
+
+Options:
+  -h, --help  Print help
+```
+
+### `aig reviewed`
+
+```
+Mark a file or intent as human-reviewed
+
+Usage: aig reviewed <TARGET>
+
+Arguments:
+  <TARGET>  File path or intent ID to mark as reviewed
+
+Options:
+  -h, --help  Print help
 ```
 
 ## Supported Languages (Semantic Diff)

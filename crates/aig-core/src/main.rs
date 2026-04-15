@@ -106,6 +106,16 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
+    /// Show trust and provenance information for files
+    Trust {
+        /// File path to inspect (omit for project-wide summary)
+        file: Option<String>,
+    },
+    /// Mark a file or intent as human-reviewed
+    Reviewed {
+        /// File path or intent ID to mark as reviewed
+        target: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -154,6 +164,8 @@ fn main() {
         Commands::Repair => cmd_repair(),
         Commands::Export { output } => cmd_export(&output),
         Commands::ImportBundle { path, force } => cmd_import_bundle(&path, force),
+        Commands::Trust { file } => cmd_trust(file.as_deref()),
+        Commands::Reviewed { target } => cmd_reviewed(&target),
     };
 
     if let Err(e) = result {
@@ -1124,6 +1136,189 @@ fn cmd_import_bundle(path: &str, force: bool) -> anyhow::Result<()> {
         anyhow::bail!("bundle file not found: {path}");
     }
     aig_core::bundle::import_bundle(bundle_path, force)
+}
+
+fn cmd_trust(file: Option<&str>) -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+    let db = Database::new()?;
+
+    match file {
+        Some(file_path) => {
+            // Per-file provenance breakdown
+            let mut stmt = db.conn.prepare(
+                "SELECT p.start_line, p.end_line, p.origin, p.reviewed,
+                        c.message, i.description
+                 FROM provenance p
+                 JOIN checkpoints c ON p.checkpoint_id = c.id
+                 JOIN intents i ON c.intent_id = i.id
+                 WHERE p.file_path = ?1
+                 ORDER BY p.start_line",
+            )?;
+
+            let rows: Vec<_> = stmt
+                .query_map(rusqlite::params![file_path], |row| {
+                    Ok((
+                        row.get::<_, i64>(0)?,
+                        row.get::<_, i64>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, bool>(3)?,
+                        row.get::<_, String>(4)?,
+                        row.get::<_, String>(5)?,
+                    ))
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+
+            if rows.is_empty() {
+                println!("No provenance data for {file_path}");
+                return Ok(());
+            }
+
+            println!("Trust report: {file_path}");
+            println!();
+
+            let mut ai_lines = 0i64;
+            let mut human_lines = 0i64;
+            let mut reviewed_count = 0;
+
+            for (start, end, origin, reviewed, cp_msg, intent_desc) in &rows {
+                let line_count = if *end == 0 { 0 } else { end - start + 1 };
+                let review_mark = if *reviewed { " [reviewed]" } else { "" };
+                let range = if *end == 0 {
+                    "entire file".to_string()
+                } else {
+                    format!("L{start}-{end}")
+                };
+
+                let icon = if origin == "ai-assisted" { "~" } else { "o" };
+                println!("  {icon} {range}: {origin}{review_mark}");
+                println!("    checkpoint: {cp_msg}");
+                println!("    intent: {intent_desc}");
+
+                if origin == "ai-assisted" {
+                    ai_lines += line_count;
+                } else {
+                    human_lines += line_count;
+                }
+                if *reviewed {
+                    reviewed_count += 1;
+                }
+            }
+
+            let total = ai_lines + human_lines;
+            println!();
+            if total > 0 {
+                let ai_pct = (ai_lines as f64 / total as f64 * 100.0) as u64;
+                let human_pct = 100 - ai_pct;
+                println!(
+                    "  Summary: {human_pct}% human, {ai_pct}% AI-assisted ({reviewed_count}/{} regions reviewed)",
+                    rows.len()
+                );
+            } else {
+                println!(
+                    "  Summary: {} regions tracked, {reviewed_count} reviewed",
+                    rows.len()
+                );
+            }
+        }
+        None => {
+            // Project-wide summary
+            let mut stmt = db.conn.prepare(
+                "SELECT file_path, origin, COUNT(*) as cnt,
+                        SUM(CASE WHEN reviewed = 1 THEN 1 ELSE 0 END) as rev
+                 FROM provenance
+                 GROUP BY file_path, origin
+                 ORDER BY file_path",
+            )?;
+
+            let rows: Vec<_> = stmt
+                .query_map([], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, i64>(2)?,
+                        row.get::<_, i64>(3)?,
+                    ))
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+
+            if rows.is_empty() {
+                println!("No provenance data yet. Create checkpoints to start tracking.");
+                return Ok(());
+            }
+
+            println!("Trust report (project-wide)");
+            println!();
+
+            let mut current_file = String::new();
+            let mut total_ai = 0i64;
+            let mut total_human = 0i64;
+            let mut total_reviewed = 0i64;
+            let mut total_regions = 0i64;
+
+            for (file_path, origin, count, reviewed) in &rows {
+                if *file_path != current_file {
+                    current_file = file_path.clone();
+                }
+                let icon = if origin == "ai-assisted" { "~" } else { "o" };
+                let rev_str = if *reviewed > 0 {
+                    format!(" ({reviewed} reviewed)")
+                } else {
+                    String::new()
+                };
+                println!("  {icon} {file_path}: {count} {origin} region(s){rev_str}");
+
+                if origin == "ai-assisted" {
+                    total_ai += count;
+                } else {
+                    total_human += count;
+                }
+                total_reviewed += reviewed;
+                total_regions += count;
+            }
+
+            println!();
+            println!(
+                "  Total: {} regions ({} human, {} AI-assisted, {} reviewed)",
+                total_regions, total_human, total_ai, total_reviewed
+            );
+        }
+    }
+
+    Ok(())
+}
+
+fn cmd_reviewed(target: &str) -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+    let db = Database::new()?;
+    let now = chrono::Utc::now().to_rfc3339();
+
+    // Try as file path first
+    let updated = db.conn.execute(
+        "UPDATE provenance SET reviewed = 1, reviewed_at = ?1 WHERE file_path = ?2 AND reviewed = 0",
+        rusqlite::params![now, target],
+    )?;
+
+    if updated > 0 {
+        println!("Marked {updated} region(s) in {target} as reviewed");
+        return Ok(());
+    }
+
+    // Try as intent ID prefix
+    let updated = db.conn.execute(
+        "UPDATE provenance SET reviewed = 1, reviewed_at = ?1
+         WHERE checkpoint_id IN (
+             SELECT id FROM checkpoints WHERE intent_id LIKE ?2
+         ) AND reviewed = 0",
+        rusqlite::params![now, format!("{target}%")],
+    )?;
+
+    if updated > 0 {
+        println!("Marked {updated} region(s) for intent {target} as reviewed");
+    } else {
+        println!("No unreviewed provenance found for {target}");
+    }
+
+    Ok(())
 }
 
 fn format_datetime(rfc3339: &str) -> String {

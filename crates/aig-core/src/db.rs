@@ -59,6 +59,18 @@ impl Database {
                 symbol_name TEXT,
                 details TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS provenance (
+                id TEXT PRIMARY KEY,
+                checkpoint_id TEXT,
+                file_path TEXT,
+                start_line INTEGER,
+                end_line INTEGER,
+                origin TEXT,
+                reviewed INTEGER DEFAULT 0,
+                reviewed_at TEXT,
+                reviewed_by TEXT
+            );
             ",
         )?;
         Ok(())

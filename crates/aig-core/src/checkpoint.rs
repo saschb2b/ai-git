@@ -39,9 +39,98 @@ impl CheckpointManager {
         )?;
 
         record_semantic_changes(db, &id, repo, git_sha)?;
+        record_provenance(db, &id, session_id, repo, git_sha)?;
 
         Ok(id)
     }
+}
+
+/// Determine whether changes in this checkpoint are AI-assisted or human-only,
+/// and record provenance for each changed line range.
+fn record_provenance(
+    db: &Database,
+    checkpoint_id: &str,
+    session_id: &str,
+    repo: &Repository,
+    git_sha: &str,
+) -> Result<()> {
+    // Check if the session has any AI conversation captures
+    let conv_count: i64 = db.conn.query_row(
+        "SELECT COUNT(*) FROM conversations WHERE session_id = ?1",
+        rusqlite::params![session_id],
+        |row| row.get(0),
+    )?;
+
+    let origin = if conv_count > 0 {
+        "ai-assisted"
+    } else {
+        "human"
+    };
+
+    let oid = git2::Oid::from_str(git_sha)?;
+    let commit = repo.find_commit(oid)?;
+    let commit_tree = commit.tree()?;
+
+    let parent_tree = if commit.parent_count() > 0 {
+        Some(commit.parent(0)?.tree()?)
+    } else {
+        None
+    };
+
+    let diff = repo.diff_tree_to_tree(parent_tree.as_ref(), Some(&commit_tree), None)?;
+
+    for delta in diff.deltas() {
+        let file_path = match delta.new_file().path() {
+            Some(p) => p.to_string_lossy().to_string(),
+            None => continue,
+        };
+
+        // Find which lines were added/modified in this file
+        let mut hunks: Vec<(usize, usize)> = Vec::new();
+        let patch = git2::Patch::from_diff(&diff, delta_index(&diff, &file_path))?;
+        if let Some(ref patch) = patch {
+            for h in 0..patch.num_hunks() {
+                let (hunk, _) = patch.hunk(h)?;
+                let start = hunk.new_start() as usize;
+                let lines = hunk.new_lines() as usize;
+                if lines > 0 {
+                    hunks.push((start, start + lines - 1));
+                }
+            }
+        }
+
+        // If no hunk info, record the whole file
+        if hunks.is_empty() {
+            hunks.push((1, 0)); // 0 end_line means "entire file"
+        }
+
+        for (start, end) in &hunks {
+            let id = CheckpointManager::generate_id(&format!(
+                "prov-{checkpoint_id}-{file_path}-{start}-{end}"
+            ));
+            db.conn.execute(
+                "INSERT INTO provenance (id, checkpoint_id, file_path, start_line, end_line, origin)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                rusqlite::params![id, checkpoint_id, file_path, start, end, origin],
+            )?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Find the index of a delta for a specific file path within a diff.
+fn delta_index(diff: &git2::Diff, file_path: &str) -> usize {
+    for i in 0..diff.deltas().count() {
+        if let Some(delta) = diff.deltas().nth(i) {
+            if let Some(p) = delta.new_file().path() {
+                if p.to_string_lossy() == file_path {
+                    return i;
+                }
+            }
+        }
+    }
+    0
 }
 
 fn record_semantic_changes(

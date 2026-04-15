@@ -48,11 +48,8 @@ Intent and conversation metadata is serialized into [git notes](https://git-scm.
 ### Semantic merge engine
 When two developers (or two AI agents) modify the same file, git produces text-level conflicts. A semantic merge engine understands that adding a method to a class and renaming that class are compatible operations — and composes them automatically. This requires AST-level merge logic built on the same tree-sitter infrastructure we already use for diffing.
 
-### Trust scoring and provenance
-Track which lines were human-written vs AI-generated, at what confidence level, and whether a human explicitly reviewed them. This creates a trust gradient per line/function, useful for:
-- Security audits ("show me all AI-generated code in the auth module")
-- Onboarding ("which parts of this codebase have the most human oversight?")
-- Compliance ("flag unreviewed AI-generated code in regulated modules")
+### ~~Trust scoring and provenance~~ — Shipped
+`aig trust [file]` shows which code regions are human-written vs AI-assisted, and whether they've been reviewed. `aig reviewed <file|intent>` marks regions as human-reviewed. Provenance is recorded automatically during each checkpoint based on whether the session has AI conversation captures. Useful for security audits, onboarding, and compliance.
 
 ### ~~LLM-powered `aig why`~~ — Shipped
 `aig why file:line --explain` synthesizes a natural-language explanation from the intent, checkpoint, conversation notes, and semantic changes. Without `--explain`, the raw metadata is shown as before. Requires the `@aig/llm` package.
