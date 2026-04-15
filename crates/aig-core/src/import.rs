@@ -106,6 +106,65 @@ impl IpcClient {
 
         Ok((intent, summary))
     }
+
+    /// Send an `explain_line` request and read the response.
+    ///
+    /// Returns a natural-language explanation of why a line exists.
+    pub fn explain_line(
+        &mut self,
+        file_path: &str,
+        line: usize,
+        intent_description: &str,
+        checkpoint_message: &str,
+        conversation_notes: &[String],
+        semantic_changes: &[String],
+        line_content: &str,
+    ) -> Result<String> {
+        let request = serde_json::json!({
+            "command": "explain_line",
+            "params": {
+                "file_path": file_path,
+                "line": line,
+                "intent_description": intent_description,
+                "checkpoint_message": checkpoint_message,
+                "conversation_notes": conversation_notes,
+                "semantic_changes": semantic_changes,
+                "line_content": line_content,
+            }
+        });
+
+        let stdin = self
+            .child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("IPC stdin unavailable"))?;
+
+        let mut line_buf = serde_json::to_string(&request)?;
+        line_buf.push('\n');
+        stdin.write_all(line_buf.as_bytes())?;
+        stdin.flush()?;
+
+        let mut response_line = String::new();
+        self.reader.read_line(&mut response_line)?;
+
+        if response_line.is_empty() {
+            anyhow::bail!("IPC process returned empty response");
+        }
+
+        let resp: serde_json::Value = serde_json::from_str(&response_line)?;
+
+        if let Some(err) = resp.get("error").and_then(|v| v.as_str()) {
+            anyhow::bail!("LLM error: {err}");
+        }
+
+        let result = resp
+            .get("result")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        Ok(result)
+    }
 }
 
 impl Drop for IpcClient {

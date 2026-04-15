@@ -54,8 +54,8 @@ Track which lines were human-written vs AI-generated, at what confidence level, 
 - Onboarding ("which parts of this codebase have the most human oversight?")
 - Compliance ("flag unreviewed AI-generated code in regulated modules")
 
-### LLM-powered `aig why`
-The current `aig why` returns stored metadata. With LLM integration, it could synthesize a natural-language explanation: "This line exists because the team decided to use JWT with HS256 for simplicity. The alternative (RS256) was considered but rejected due to complexity in the single-service deployment. See the conversation from April 14."
+### ~~LLM-powered `aig why`~~ — Shipped
+`aig why file:line --explain` synthesizes a natural-language explanation from the intent, checkpoint, conversation notes, and semantic changes. Without `--explain`, the raw metadata is shown as before. Requires the `@aig/llm` package.
 
 ### ~~Broader language support~~ — Shipped
 Semantic diff now supports 11 languages: TypeScript/JavaScript, Python, Rust, Go, Java, C#, C++, Ruby, PHP, Kotlin, and Swift. The infrastructure supports any language with a tree-sitter grammar.

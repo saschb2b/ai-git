@@ -9,6 +9,16 @@ export interface LineExplanation {
   reasoning: string;
 }
 
+export interface ExplainLineContext {
+  filePath: string;
+  line: number;
+  intentDescription: string;
+  checkpointMessage: string;
+  conversationNotes?: string[];
+  semanticChanges?: string[];
+  lineContent?: string;
+}
+
 export interface LLMProvider {
   inferIntent(
     commitMessages: string[],
@@ -17,10 +27,5 @@ export interface LLMProvider {
 
   generateSummary(changes: string[]): Promise<string>;
 
-  explainLine(context: {
-    filePath: string;
-    line: number;
-    intentDescription: string;
-    checkpointMessage: string;
-  }): Promise<string>;
+  explainLine(context: ExplainLineContext): Promise<string>;
 }

@@ -47,6 +47,9 @@ enum Commands {
     Why {
         /// Location in the form "src/main.rs:42"
         location: String,
+        /// Use LLM to synthesize a natural-language explanation
+        #[arg(long)]
+        explain: bool,
     },
     /// Import existing git history into aig
     Import,
@@ -138,7 +141,7 @@ fn main() {
         Commands::Status => cmd_status(),
         Commands::Log => cmd_log(),
         Commands::Diff { semantic } => cmd_diff(semantic),
-        Commands::Why { location } => cmd_why(&location),
+        Commands::Why { location, explain } => cmd_why(&location, explain),
         Commands::Import => cmd_import(),
         Commands::Conversation { action } => match action {
             ConversationAction::Add { message } => cmd_conversation_add(&message),
@@ -605,7 +608,7 @@ fn change_type_icon(change_type: &str) -> &str {
     }
 }
 
-fn cmd_why(location: &str) -> anyhow::Result<()> {
+fn cmd_why(location: &str, explain: bool) -> anyhow::Result<()> {
     ensure_aig_initialized()?;
     let db = Database::new()?;
 
@@ -665,18 +668,7 @@ fn cmd_why(location: &str) -> anyhow::Result<()> {
             let short_sha = &git_sha[..8];
             let short_intent = &intent_id[..8];
 
-            if line_num > 0 {
-                println!("{}:{}", file_path, line_num);
-            } else {
-                println!("{}", file_path);
-            }
-            println!();
-            println!("  Intent:     [{short_intent}] {intent_desc}");
-            println!("  Checkpoint: {cp_msg}");
-            println!("  Commit:     {short_sha}");
-            println!("  Time:       {cp_time}");
-
-            // Show semantic changes for this checkpoint on this file
+            // Gather semantic changes
             let mut sc_stmt = db.conn.prepare(
                 "SELECT change_type, symbol_name, details FROM semantic_changes
                  WHERE checkpoint_id = ?1 AND file_path = ?2",
@@ -690,6 +682,87 @@ fn cmd_why(location: &str) -> anyhow::Result<()> {
                     ))
                 })?
                 .collect::<Result<Vec<_>, _>>()?;
+
+            // Gather conversation notes
+            let mut conv_stmt = db.conn.prepare(
+                "SELECT c.message FROM conversations c
+                 JOIN sessions s ON c.session_id = s.id
+                 WHERE s.intent_id = ?1
+                 ORDER BY c.created_at",
+            )?;
+            let conv_notes: Vec<String> = conv_stmt
+                .query_map(rusqlite::params![intent_id], |row| row.get(0))?
+                .collect::<Result<Vec<_>, _>>()?;
+
+            // If --explain, use LLM to synthesize an explanation
+            if explain {
+                let repo_root = std::env::current_dir()?;
+                let repo_root_str = repo_root.to_string_lossy();
+                let mut ipc = aig_core::import::IpcClient::try_connect(&repo_root_str);
+
+                if let Some(ref mut client) = ipc {
+                    // Read the line content if a specific line was requested
+                    let line_content = if line_num > 0 {
+                        std::fs::read_to_string(file_path)
+                            .ok()
+                            .and_then(|content| {
+                                content.lines().nth(line_num - 1).map(|l| l.to_string())
+                            })
+                            .unwrap_or_default()
+                    } else {
+                        String::new()
+                    };
+
+                    let sem_strings: Vec<String> = sem_changes
+                        .iter()
+                        .map(|(ct, sym, det)| {
+                            if det.is_empty() {
+                                format!("{ct} `{sym}`")
+                            } else {
+                                format!("{ct} `{sym}` — {det}")
+                            }
+                        })
+                        .collect();
+
+                    let explanation = client.explain_line(
+                        file_path,
+                        line_num,
+                        intent_desc,
+                        cp_msg,
+                        &conv_notes,
+                        &sem_strings,
+                        &line_content,
+                    )?;
+
+                    if line_num > 0 {
+                        println!("{}:{}", file_path, line_num);
+                    } else {
+                        println!("{}", file_path);
+                    }
+                    println!();
+                    println!("  {explanation}");
+                    println!();
+                    println!("  Intent:     [{short_intent}] {intent_desc}");
+                    println!("  Checkpoint: {cp_msg}");
+                    println!("  Commit:     {short_sha}");
+                    return Ok(());
+                } else {
+                    println!("LLM not available (install @aig/llm for --explain). Falling back to metadata.");
+                    println!();
+                }
+            }
+
+            // Standard metadata output
+            if line_num > 0 {
+                println!("{}:{}", file_path, line_num);
+            } else {
+                println!("{}", file_path);
+            }
+            println!();
+            println!("  Intent:     [{short_intent}] {intent_desc}");
+            println!("  Checkpoint: {cp_msg}");
+            println!("  Commit:     {short_sha}");
+            println!("  Time:       {cp_time}");
 
             if !sem_changes.is_empty() {
                 println!();
@@ -705,30 +778,10 @@ fn cmd_why(location: &str) -> anyhow::Result<()> {
                 }
             }
 
-            // Show conversation notes for this session
-            let conv_count: i64 = db.conn.query_row(
-                "SELECT COUNT(*) FROM conversations c
-                 JOIN sessions s ON c.session_id = s.id
-                 WHERE s.intent_id = ?1",
-                rusqlite::params![intent_id],
-                |row| row.get(0),
-            )?;
-
-            if conv_count > 0 {
+            if !conv_notes.is_empty() {
                 println!();
                 println!("  Conversation notes:");
-                let mut conv_stmt = db.conn.prepare(
-                    "SELECT c.message, c.created_at FROM conversations c
-                     JOIN sessions s ON c.session_id = s.id
-                     WHERE s.intent_id = ?1
-                     ORDER BY c.created_at",
-                )?;
-                let convs = conv_stmt.query_map(rusqlite::params![intent_id], |row| {
-                    Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-                })?;
-
-                for conv in convs {
-                    let (msg, _ts) = conv?;
+                for msg in &conv_notes {
                     println!("    - {msg}");
                 }
             }

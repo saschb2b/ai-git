@@ -119,13 +119,14 @@ Options:
 ```
 Explain why a line/region was changed
 
-Usage: aig why <LOCATION>
+Usage: aig why [OPTIONS] <LOCATION>
 
 Arguments:
   <LOCATION>  Location in the form "src/main.rs:42"
 
 Options:
-  -h, --help  Print help
+      --explain  Use LLM to synthesize a natural-language explanation
+  -h, --help     Print help
 ```
 
 ### `aig import`

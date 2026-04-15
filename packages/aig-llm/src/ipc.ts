@@ -21,6 +21,9 @@ interface ExplainLineParams {
   line: number;
   intent_description: string;
   checkpoint_message: string;
+  conversation_notes?: string[];
+  semantic_changes?: string[];
+  line_content?: string;
 }
 
 interface IpcResponse {
@@ -53,6 +56,9 @@ async function handleCommand(
         line: params.line,
         intentDescription: params.intent_description,
         checkpointMessage: params.checkpoint_message,
+        conversationNotes: params.conversation_notes,
+        semanticChanges: params.semantic_changes,
+        lineContent: params.line_content,
       });
     }
     default:

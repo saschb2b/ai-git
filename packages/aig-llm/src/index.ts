@@ -3,6 +3,7 @@ export type {
   LLMProvider,
   IntentInference,
   LineExplanation,
+  ExplainLineContext,
 } from "./providers/types.js";
 export { startIpcServer } from "./ipc.js";
 export {

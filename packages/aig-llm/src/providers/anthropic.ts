@@ -1,5 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { IntentInference, LLMProvider } from "./types.js";
+import type {
+  IntentInference,
+  LLMProvider,
+  ExplainLineContext,
+} from "./types.js";
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
@@ -65,20 +69,28 @@ Provide only the summary, no preamble.`;
     return response.content[0].type === "text" ? response.content[0].text : "";
   }
 
-  async explainLine(context: {
-    filePath: string;
-    line: number;
-    intentDescription: string;
-    checkpointMessage: string;
-  }): Promise<string> {
-    const prompt = `Explain why this line was changed in the context of the developer's intent.
+  async explainLine(context: ExplainLineContext): Promise<string> {
+    let prompt = `You are explaining why a specific line of code exists, based on the intent-based version control metadata captured during development.
 
 File: ${context.filePath}
-Line number: ${context.line}
-Developer intent: ${context.intentDescription}
-Checkpoint message: ${context.checkpointMessage}
+Line: ${context.line}`;
 
-Provide a brief, clear explanation of the purpose of this change.`;
+    if (context.lineContent) {
+      prompt += `\nContent: ${context.lineContent}`;
+    }
+
+    prompt += `\n\nIntent: ${context.intentDescription}
+Checkpoint: ${context.checkpointMessage}`;
+
+    if (context.conversationNotes && context.conversationNotes.length > 0) {
+      prompt += `\n\nConversation notes captured during this session:\n${context.conversationNotes.map((n) => `- ${n}`).join("\n")}`;
+    }
+
+    if (context.semanticChanges && context.semanticChanges.length > 0) {
+      prompt += `\n\nSemantic changes in this checkpoint:\n${context.semanticChanges.map((c) => `- ${c}`).join("\n")}`;
+    }
+
+    prompt += `\n\nSynthesize a clear, concise explanation (2-4 sentences) of why this line exists. Connect the intent, the conversation context, and the specific change. Write in plain language, not bullet points. Do not repeat the raw metadata — explain the reasoning behind it.`;
 
     const response = await this.client.messages.create({
       model: this.model,
