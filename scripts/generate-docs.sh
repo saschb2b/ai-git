@@ -48,7 +48,7 @@ HEADER
   echo ""
 
   # Each subcommand's help
-  for cmd in init session checkpoint status log diff why import conversation watch capture; do
+  for cmd in init session checkpoint status log diff why import conversation watch capture push pull review repair export import-bundle hooks trust reviewed release changelog; do
     echo "### \`aig $cmd\`"
     echo ""
     echo '```'
@@ -75,6 +75,16 @@ HEADER
   echo '```'
   echo ""
 
+  # Hooks subcommands
+  for sub in install remove; do
+    echo "### \`aig hooks $sub\`"
+    echo ""
+    echo '```'
+    "$AIG" hooks "$sub" --help 2>&1 | sed 's/aig\.exe/aig/g' || true
+    echo '```'
+    echo ""
+  done
+
   # Supported languages for semantic diff
   cat << 'LANGHEADER'
 ## Supported Languages (Semantic Diff)
@@ -85,6 +95,13 @@ HEADER
 | Python | `.py` | functions, classes |
 | Rust | `.rs` | functions, structs, enums, impls, traits, types |
 | Go | `.go` | functions, methods, types |
+| Java | `.java` | classes, interfaces, methods, constructors, enums |
+| C# | `.cs` | classes, interfaces, methods, structs, enums, constructors |
+| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.h` | functions, classes, structs, enums, templates |
+| Ruby | `.rb` | methods, classes, modules |
+| PHP | `.php` | functions, methods, classes, interfaces, traits, enums |
+| Kotlin | `.kt`, `.kts` | functions, classes, objects |
+| Swift | `.swift` | functions, classes, protocols, type aliases |
 
 All other file types fall back to line-based diffing automatically.
 LANGHEADER

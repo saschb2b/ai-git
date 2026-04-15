@@ -16,29 +16,29 @@ AI-native version control for intent-driven development
 Usage: aig <COMMAND>
 
 Commands:
-  init          Initialize a new .aig directory in the current repo
-  session       Manage development sessions
-  checkpoint    Create a checkpoint (auto-generates message from semantic diff if omitted)
-  status        Show current aig status
-  log           Show intent-level history
-  diff          Show changes since last checkpoint
-  why           Explain why a line/region was changed
-  import        Import existing git history into aig
-  conversation  Manage conversation records
-  watch         Watch for file changes and auto-checkpoint
-  capture       Capture AI conversation into the active session
-  push          Push aig metadata to remote via git notes
-  pull          Pull aig metadata from remote via git notes
-  review        Review an intent — show summary, semantic changes, and conversation (--tui for interactive)
-  repair        Repair aig metadata after rebase (re-attaches orphaned notes)
-  export        Export all .aig metadata to a portable bundle file
-  import-bundle Import .aig metadata from a bundle file
-  hooks         Install or remove git hooks for automatic aig tracking
-  trust         Show trust and provenance information for files
-  reviewed      Mark a file or intent as human-reviewed
-  release       Create a release from completed intents
-  changelog     Generate a changelog from intent history
-  help          Print this message or the help of the given subcommand(s)
+  init           Initialize a new .aig directory in the current repo
+  session        Manage development sessions
+  checkpoint     Create a checkpoint (auto-generates message from semantic diff if omitted)
+  status         Show current aig status
+  log            Show intent-level history
+  diff           Show changes since last checkpoint
+  why            Explain why a line/region was changed
+  import         Import existing git history into aig
+  conversation   Manage conversation records
+  watch          Watch for file changes and auto-checkpoint
+  capture        Capture AI conversation into the active session
+  push           Push aig metadata to remote via git notes
+  pull           Pull aig metadata from remote via git notes
+  review         Review an intent — show summary, semantic changes, and conversation
+  repair         Repair aig metadata after rebase (re-attaches orphaned notes)
+  export         Export all .aig metadata to a portable bundle file
+  import-bundle  Import .aig metadata from a bundle file
+  hooks          Install or remove git hooks for automatic aig tracking
+  trust          Show trust and provenance information for files
+  reviewed       Mark a file or intent as human-reviewed
+  release        Create a release from completed intents
+  changelog      Generate a changelog from intent history
+  help           Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help  Print help
@@ -49,10 +49,11 @@ Options:
 ```
 Initialize a new .aig directory in the current repo
 
-Usage: aig init
+Usage: aig init [OPTIONS]
 
 Options:
-  -h, --help  Print help
+      --import  Also run aig import after initialization
+  -h, --help    Print help
 ```
 
 ### `aig session`
@@ -185,40 +186,55 @@ Options:
   -h, --help             Print help
 ```
 
-### `aig session start`
+### `aig push`
 
 ```
-Start a new session with an intent
+Push aig metadata to remote via git notes
 
-Usage: aig session start <INTENT>
+Usage: aig push [REMOTE]
 
 Arguments:
-  <INTENT>  Description of the development intent
+  [REMOTE]  Remote name (default: origin) [default: origin]
 
 Options:
   -h, --help  Print help
 ```
 
-### `aig session end`
+### `aig pull`
 
 ```
-End the current session
+Pull aig metadata from remote via git notes
 
-Usage: aig session end
+Usage: aig pull [REMOTE]
+
+Arguments:
+  [REMOTE]  Remote name (default: origin) [default: origin]
 
 Options:
   -h, --help  Print help
 ```
 
-### `aig conversation add`
+### `aig review`
 
 ```
-Add a conversation message to the current session
+Review an intent — show summary, semantic changes, and conversation
 
-Usage: aig conversation add <MESSAGE>
+Usage: aig review [OPTIONS] [INTENT_ID]
 
 Arguments:
-  <MESSAGE>  The message content
+  [INTENT_ID]  Intent ID (first 8 chars). Omit to review the most recent intent
+
+Options:
+      --tui   Open interactive terminal UI
+  -h, --help  Print help
+```
+
+### `aig repair`
+
+```
+Repair aig metadata after rebase (re-attaches orphaned notes)
+
+Usage: aig repair
 
 Options:
   -h, --help  Print help
@@ -269,13 +285,6 @@ Options:
   -h, --help  Print help
 ```
 
-Installs three hooks:
-- **post-commit** — auto-checkpoint after each commit
-- **post-checkout** — auto-start a session when switching branches
-- **pre-push** — auto-sync aig metadata when pushing
-
-Hooks are safe: they only run if `.aig/` exists, never overwrite existing non-aig hooks, and failures don't block git operations.
-
 ### `aig trust`
 
 ```
@@ -319,8 +328,6 @@ Options:
   -h, --help           Print help
 ```
 
-Creates a git tag and records a release that groups all intents since the last release. Outputs a summary of included intents.
-
 ### `aig changelog`
 
 ```
@@ -335,7 +342,66 @@ Options:
   -h, --help  Print help
 ```
 
-Generates a markdown changelog from intent descriptions and semantic changes. Groups changes by intent with per-symbol detail.
+### `aig session start`
+
+```
+Start a new session with an intent
+
+Usage: aig session start <INTENT>
+
+Arguments:
+  <INTENT>  Description of the development intent
+
+Options:
+  -h, --help  Print help
+```
+
+### `aig session end`
+
+```
+End the current session
+
+Usage: aig session end
+
+Options:
+  -h, --help  Print help
+```
+
+### `aig conversation add`
+
+```
+Add a conversation message to the current session
+
+Usage: aig conversation add <MESSAGE>
+
+Arguments:
+  <MESSAGE>  The message content
+
+Options:
+  -h, --help  Print help
+```
+
+### `aig hooks install`
+
+```
+Install git hooks for automatic aig tracking
+
+Usage: aig hooks install
+
+Options:
+  -h, --help  Print help
+```
+
+### `aig hooks remove`
+
+```
+Remove aig git hooks
+
+Usage: aig hooks remove
+
+Options:
+  -h, --help  Print help
+```
 
 ## Supported Languages (Semantic Diff)
 
