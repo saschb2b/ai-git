@@ -174,7 +174,7 @@ export class AigDatabase {
          FROM conversations c
          JOIN sessions s ON c.session_id = s.id
          WHERE s.intent_id = ?
-         ORDER BY c.created_at DESC`,
+         ORDER BY c.created_at ASC`,
       )
       .all(intentId) as Conversation[];
   }
