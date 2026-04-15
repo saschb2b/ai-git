@@ -31,6 +31,8 @@ Commands:
   pull          Pull aig metadata from remote via git notes
   review        Review an intent — show summary, semantic changes, and conversation
   repair        Repair aig metadata after rebase (re-attaches orphaned notes)
+  export        Export all .aig metadata to a portable bundle file
+  import-bundle Import .aig metadata from a bundle file
   help          Print this message or the help of the given subcommand(s)
 
 Options:
@@ -216,6 +218,35 @@ Options:
   -h, --help  Print help
 ```
 
+### `aig export`
+
+```
+Export all .aig metadata to a portable bundle file
+
+Usage: aig export [OUTPUT]
+
+Arguments:
+  [OUTPUT]  Output file path (default: aig-bundle.tar.gz) [default: aig-bundle.tar.gz]
+
+Options:
+  -h, --help  Print help
+```
+
+### `aig import-bundle`
+
+```
+Import .aig metadata from a bundle file
+
+Usage: aig import-bundle [OPTIONS] <PATH>
+
+Arguments:
+  <PATH>  Path to the .aig-bundle.tar.gz file
+
+Options:
+      --force  Overwrite existing .aig directory if present
+  -h, --help   Print help
+```
+
 ## Supported Languages (Semantic Diff)
 
 | Language | Extensions | Definition Types Tracked |
@@ -224,5 +255,12 @@ Options:
 | Python | `.py` | functions, classes |
 | Rust | `.rs` | functions, structs, enums, impls, traits, types |
 | Go | `.go` | functions, methods, types |
+| Java | `.java` | classes, interfaces, methods, constructors, enums |
+| C# | `.cs` | classes, interfaces, methods, structs, enums, constructors |
+| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.h` | functions, classes, structs, enums, templates |
+| Ruby | `.rb` | methods, classes, modules |
+| PHP | `.php` | functions, methods, classes, interfaces, traits, enums |
+| Kotlin | `.kt`, `.kts` | functions, classes, objects |
+| Swift | `.swift` | functions, classes, protocols, type aliases |
 
 All other file types fall back to line-based diffing automatically.

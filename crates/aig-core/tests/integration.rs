@@ -287,6 +287,76 @@ fn test_semantic_diff_rust() {
 }
 
 // ---------------------------------------------------------------------------
+// Test: test_semantic_diff_php
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_semantic_diff_php() {
+    let old = "<?php\nfunction greet($name) { return \"Hello $name\"; }\nclass User { public function getName() { return $this->name; } }";
+    let new = "<?php\nfunction greet($name, $formal = false) { return \"Hello $name\"; }\nfunction farewell() { return \"bye\"; }";
+
+    let changes = aig_treesitter::semantic_diff(old, new, aig_treesitter::Language::Php).unwrap();
+
+    let greet = changes.iter().find(|c| c.symbol_name == "greet");
+    assert!(greet.is_some(), "greet should appear: {changes:?}");
+    assert_eq!(greet.unwrap().change_type, "modified");
+
+    let farewell = changes.iter().find(|c| c.symbol_name == "farewell");
+    assert!(farewell.is_some(), "farewell should appear: {changes:?}");
+    assert_eq!(farewell.unwrap().change_type, "added");
+
+    let user = changes.iter().find(|c| c.symbol_name == "User");
+    assert!(user.is_some(), "User should appear: {changes:?}");
+    assert_eq!(user.unwrap().change_type, "removed");
+}
+
+// ---------------------------------------------------------------------------
+// Test: test_semantic_diff_kotlin
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_semantic_diff_kotlin() {
+    let old = "fun greet(name: String): String { return \"Hello $name\" }\nclass User(val name: String)";
+    let new = "fun greet(name: String, formal: Boolean = false): String { return \"Hello $name\" }\nclass User(val name: String, val age: Int)";
+
+    let changes =
+        aig_treesitter::semantic_diff(old, new, aig_treesitter::Language::Kotlin).unwrap();
+
+    let greet = changes.iter().find(|c| c.symbol_name == "greet");
+    assert!(greet.is_some(), "greet should appear: {changes:?}");
+    assert_eq!(greet.unwrap().change_type, "modified");
+
+    let user = changes.iter().find(|c| c.symbol_name == "User");
+    assert!(user.is_some(), "User should appear: {changes:?}");
+    assert_eq!(user.unwrap().change_type, "modified");
+}
+
+// ---------------------------------------------------------------------------
+// Test: test_semantic_diff_swift
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_semantic_diff_swift() {
+    let old = "func greet(name: String) -> String { return \"Hello \\(name)\" }\nclass User { var name: String = \"\" }";
+    let new = "func greet(name: String, formal: Bool = false) -> String { return \"Hello \\(name)\" }\nfunc farewell() -> String { return \"bye\" }";
+
+    let changes =
+        aig_treesitter::semantic_diff(old, new, aig_treesitter::Language::Swift).unwrap();
+
+    let greet = changes.iter().find(|c| c.symbol_name == "greet");
+    assert!(greet.is_some(), "greet should appear: {changes:?}");
+    assert_eq!(greet.unwrap().change_type, "modified");
+
+    let farewell = changes.iter().find(|c| c.symbol_name == "farewell");
+    assert!(farewell.is_some(), "farewell should appear: {changes:?}");
+    assert_eq!(farewell.unwrap().change_type, "added");
+
+    let user = changes.iter().find(|c| c.symbol_name == "User");
+    assert!(user.is_some(), "User should appear: {changes:?}");
+    assert_eq!(user.unwrap().change_type, "removed");
+}
+
+// ---------------------------------------------------------------------------
 // Test 9: test_import_clusters_commits
 // ---------------------------------------------------------------------------
 

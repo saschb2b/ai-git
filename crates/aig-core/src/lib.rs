@@ -1,3 +1,4 @@
+pub mod bundle;
 pub mod capture;
 pub mod checkpoint;
 pub mod db;

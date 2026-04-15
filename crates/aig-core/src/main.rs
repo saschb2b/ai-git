@@ -89,6 +89,20 @@ enum Commands {
     },
     /// Repair aig metadata after rebase (re-attaches orphaned notes)
     Repair,
+    /// Export all .aig metadata to a portable bundle file
+    Export {
+        /// Output file path (default: aig-bundle.tar.gz)
+        #[arg(default_value = "aig-bundle.tar.gz")]
+        output: String,
+    },
+    /// Import .aig metadata from a bundle file
+    ImportBundle {
+        /// Path to the .aig-bundle.tar.gz file
+        path: String,
+        /// Overwrite existing .aig directory if present
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -135,6 +149,8 @@ fn main() {
         Commands::Pull { remote } => cmd_pull(&remote),
         Commands::Review { intent_id } => cmd_review(intent_id.as_deref()),
         Commands::Repair => cmd_repair(),
+        Commands::Export { output } => cmd_export(&output),
+        Commands::ImportBundle { path, force } => cmd_import_bundle(&path, force),
     };
 
     if let Err(e) = result {
@@ -1042,6 +1058,19 @@ fn cmd_repair() -> anyhow::Result<()> {
         println!("  orphaned: {} notes could not be matched", result.orphaned);
     }
     Ok(())
+}
+
+fn cmd_export(output: &str) -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+    aig_core::bundle::export_bundle(Path::new(output))
+}
+
+fn cmd_import_bundle(path: &str, force: bool) -> anyhow::Result<()> {
+    let bundle_path = Path::new(path);
+    if !bundle_path.exists() {
+        anyhow::bail!("bundle file not found: {path}");
+    }
+    aig_core::bundle::import_bundle(bundle_path, force)
 }
 
 fn format_datetime(rfc3339: &str) -> String {

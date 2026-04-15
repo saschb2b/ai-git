@@ -12,6 +12,9 @@ pub enum Language {
     CSharp,
     Cpp,
     Ruby,
+    Php,
+    Kotlin,
+    Swift,
     Unknown,
 }
 
@@ -25,6 +28,9 @@ pub fn detect_language(file_path: &str) -> Language {
         Some("cs") => Language::CSharp,
         Some("cpp" | "cc" | "cxx" | "hpp" | "h") => Language::Cpp,
         Some("rb") => Language::Ruby,
+        Some("php") => Language::Php,
+        Some("kt" | "kts") => Language::Kotlin,
+        Some("swift") => Language::Swift,
         _ => Language::Unknown,
     }
 }
@@ -40,6 +46,9 @@ pub fn get_parser(lang: Language) -> Result<tree_sitter::Parser> {
         Language::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
         Language::Cpp => tree_sitter_cpp::LANGUAGE.into(),
         Language::Ruby => tree_sitter_ruby::LANGUAGE.into(),
+        Language::Php => tree_sitter_php::LANGUAGE_PHP.into(),
+        Language::Kotlin => tree_sitter_kotlin_ng::LANGUAGE.into(),
+        Language::Swift => tree_sitter_swift::LANGUAGE.into(),
         Language::Unknown => bail!("cannot create parser for unknown language"),
     };
     parser.set_language(&language)?;
@@ -121,6 +130,25 @@ fn definition_node_kinds(lang: Language) -> &'static [(&'static str, &'static st
             ("class", "class"),
             ("module", "module"),
             ("singleton_method", "method"),
+        ],
+        Language::Php => &[
+            ("function_definition", "function"),
+            ("method_declaration", "method"),
+            ("class_declaration", "class"),
+            ("interface_declaration", "interface"),
+            ("trait_declaration", "trait"),
+            ("enum_declaration", "enum"),
+        ],
+        Language::Kotlin => &[
+            ("function_declaration", "function"),
+            ("class_declaration", "class"),
+            ("object_declaration", "object"),
+        ],
+        Language::Swift => &[
+            ("function_declaration", "function"),
+            ("class_declaration", "class"),
+            ("protocol_declaration", "protocol"),
+            ("typealias_declaration", "type alias"),
         ],
         Language::Unknown => &[],
     }

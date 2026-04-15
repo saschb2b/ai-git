@@ -1,11 +1,11 @@
 ---
 outline: deep
-description: "aig roadmap: from MVP to git-equivalent ecosystem in 5 phases. Remote sync, semantic merge, trust scoring, TUI review, web UI, multi-agent coordination."
+description: "aig roadmap: from working tool to git-equivalent ecosystem. Semantic merge, trust scoring, TUI review, web UI, multi-agent coordination, and beyond."
 ---
 
 # Roadmap
 
-aig today is an MVP that proves intent-based version control works. But to be a real alternative to git-centered workflows, it needs to grow from a local tool into a full ecosystem. This page maps out the path from where we are to where we need to be.
+aig has proven that intent-based version control works. The core is solid — intent tracking, semantic diffing, conversation capture, remote sync, and review are all shipped. To become a real alternative to git-centered workflows, aig needs to grow from a developer tool into a full ecosystem. This page maps out the path from where we are to where we need to be.
 
 ## What Works Today (v0.1)
 
@@ -14,32 +14,36 @@ The foundation is in place. These features are shipped and working:
 | Capability | Commands | Status |
 |---|---|---|
 | Intent tracking | `aig session start/end`, `aig checkpoint` | Working |
-| Semantic diff | `aig diff --semantic` (TS, Python, Rust, Go) | Working |
+| Semantic diff | `aig diff --semantic` (11 languages) | Working |
 | Intent history | `aig log` | Working |
 | Line-to-intent tracing | `aig why file:line` | Working |
-| Git import | `aig import` | Working |
-| Claude Code capture | `aig capture`, auto on session end | Working |
+| Git import (incremental) | `aig import` | Working |
+| AI conversation capture | `aig capture` (any AI tool) | Working |
 | File watching | `aig watch --auto-checkpoint` | Working |
 | Conversation notes | `aig conversation add` | Working |
+| Intent review | `aig review` | Working |
+| Remote sync | `aig push`, `aig pull` (via git notes) | Working |
+| Metadata repair | `aig repair` (after rebase/cherry-pick) | Working |
 | Cross-platform CI | Linux, macOS, Windows | Working |
+| Bundle export/import | `aig export`, `aig import-bundle` | Working |
 | Installation | `cargo install --git` | Working |
 
-## Phase 1: Make It Shareable
+## Phase 1: Make It Shareable <Badge type="tip" text="complete" />
 
-*The biggest gap: aig metadata is local-only. You can't collaborate.*
+*All Phase 1 goals are shipped.*
 
-### Remote sync via git notes
-The `.aig/` directory doesn't travel with `git push`. The plan is to serialize intent and conversation metadata into [git notes](https://git-scm.com/docs/git-notes) attached to commits. This way, `git push` and `git pull` carry the aig context automatically. Any aig-aware client reconstructs the local database from notes; any git-only client ignores them.
+### ~~Remote sync via git notes~~ — Shipped
+Intent and conversation metadata is serialized into [git notes](https://git-scm.com/docs/git-notes) attached to commits. `aig push` and `aig pull` sync metadata to any git remote. Any aig-aware client reconstructs the local database from notes; any git-only client ignores them.
 
-### Incremental import
-Currently `aig import` can only run once (re-running creates duplicates). Incremental import would detect commits added since the last import and process only those — essential for mixed teams where some members use aig and others don't.
+### ~~Incremental import~~ — Shipped
+`aig import` detects commits added since the last import and processes only those — safe to re-run as new commits arrive. Essential for mixed teams where some members use aig and others don't.
 
-### `.aig/` portability
-Define a stable export/import format so aig metadata can be backed up, migrated, or shared outside of git notes (e.g., for archival or cross-repo analysis).
+### ~~`.aig/` portability~~ — Shipped
+`aig export` creates a portable `.tar.gz` bundle containing the full database and object store. `aig import-bundle` restores it — useful for backups, migration, or sharing metadata outside of git notes.
 
 ## Phase 2: Make It Smart
 
-*The semantic layer needs to go beyond diffing into merging, reviewing, and understanding.*
+*The semantic layer needs to go beyond diffing into merging and understanding.*
 
 ### Semantic merge engine
 When two developers (or two AI agents) modify the same file, git produces text-level conflicts. A semantic merge engine understands that adding a method to a class and renaming that class are compatible operations — and composes them automatically. This requires AST-level merge logic built on the same tree-sitter infrastructure we already use for diffing.
@@ -53,15 +57,15 @@ Track which lines were human-written vs AI-generated, at what confidence level, 
 ### LLM-powered `aig why`
 The current `aig why` returns stored metadata. With LLM integration, it could synthesize a natural-language explanation: "This line exists because the team decided to use JWT with HS256 for simplicity. The alternative (RS256) was considered but rejected due to complexity in the single-service deployment. See the conversation from April 14."
 
-### Broader language support
-Add tree-sitter grammars for: Java, C#, C/C++, Ruby, PHP, Kotlin, Swift. The infrastructure supports any language with a tree-sitter grammar — it's a matter of adding grammar crates and extending the definition-kind mappings.
+### ~~Broader language support~~ — Shipped
+Semantic diff now supports 11 languages: TypeScript/JavaScript, Python, Rust, Go, Java, C#, C++, Ruby, PHP, Kotlin, and Swift. The infrastructure supports any language with a tree-sitter grammar.
 
 ## Phase 3: Make It Visual
 
 *CLI is for power users. Teams need visual tools.*
 
 ### TUI review interface
-A terminal UI (React/Ink) for `aig review` that lets you navigate the three layers interactively: intent → semantic → diff. Expand/collapse semantic changes, view conversations inline, approve or flag changes. Think of it as a PR review tool that starts with meaning, not text.
+`aig review` already works in the CLI, showing intent summary, semantic changes, and conversation context. The next step is a terminal UI (React/Ink) that lets you navigate the three layers interactively: intent → semantic → diff. Expand/collapse semantic changes, view conversations inline, approve or flag changes.
 
 ### Web UI
 A locally-served web interface for team-level features:
@@ -100,14 +104,14 @@ For teams that want Google-Docs-style concurrent editing of the intent graph, la
 ### Native aig remotes
 Instead of relying on git notes for metadata transport, implement native aig remotes that sync the full intent graph, conversation history, and semantic snapshots efficiently. Git remains the content-addressable store underneath, but the protocol layer is aig-native.
 
-### `aig push` / `aig pull`
-Full-featured push and pull that transfer intents, conversations, and semantic metadata as first-class objects — not just git commits with notes bolted on.
+### Native `aig push` / `aig pull`
+Today's `aig push` and `aig pull` work via git notes — functional but limited. Native remotes would transfer intents, conversations, and semantic metadata as first-class objects with their own wire protocol, not git commits with notes bolted on.
 
 ### Continuous versioning
 Remove the need for explicit checkpoints entirely. The system captures state continuously (leveraging the existing `aig watch` infrastructure) and uses AI to automatically identify meaningful boundaries — "it looks like you just finished the auth feature" — and crystallize checkpoints from the stream.
 
-### `aig review`
-A complete replacement for the PR review workflow. Instead of reviewing a branch diff, review an intent: see what the goal was, what conversation produced it, what semantic changes it introduced, and what tests it affected. Approve at the intent level, drill into specifics only where needed.
+### Intent-level PR workflows
+Today's `aig review` shows intent summary, semantic changes, and conversation context. The endgame is a complete replacement for the PR review workflow: approve at the intent level, drill into specifics only where needed, with integration into GitHub/GitLab review flows.
 
 ## The Gap Between aig and Git's Ecosystem
 
@@ -115,9 +119,9 @@ To be honest about where aig stands relative to git:
 
 | Git has | aig status |
 |---|---|
-| 20 years of battle-testing | MVP, months old |
-| GitHub/GitLab/Bitbucket hosting | Local only (phase 1: git notes) |
-| Pull request workflows | Not yet (phase 3-5) |
+| 20 years of battle-testing | Months old, actively developed |
+| GitHub/GitLab/Bitbucket hosting | Syncs via git notes (`aig push/pull`) |
+| Pull request workflows | `aig review` (CLI); PR integration planned (phase 5) |
 | Branch/merge/rebase | Delegates to git (phase 2: semantic merge) |
 | Thousands of integrations | CLI only (phase 3: IDE extensions) |
 | `.gitignore`, hooks, submodules | Delegates to git |
