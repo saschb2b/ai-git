@@ -531,7 +531,7 @@ fn cmd_log() -> anyhow::Result<()> {
 
         // Show checkpoint messages
         let mut stmt = db.conn.prepare(
-            "SELECT message, git_commit_sha, created_at FROM checkpoints WHERE intent_id = ?1 ORDER BY created_at",
+            "SELECT message, git_commit_sha, created_at FROM checkpoints WHERE intent_id = ?1 ORDER BY created_at DESC",
         )?;
         let checkpoints = stmt.query_map(rusqlite::params![intent_obj.id], |row| {
             Ok((
@@ -1039,7 +1039,7 @@ fn cmd_review(intent_id: Option<&str>) -> anyhow::Result<()> {
 
     // Checkpoints
     let mut cp_stmt = db.conn.prepare(
-        "SELECT id, message, git_commit_sha, created_at FROM checkpoints WHERE intent_id = ?1 ORDER BY created_at",
+        "SELECT id, message, git_commit_sha, created_at FROM checkpoints WHERE intent_id = ?1 ORDER BY created_at DESC",
     )?;
     let checkpoints: Vec<(String, String, String, String)> = cp_stmt
         .query_map(rusqlite::params![intent_obj.id], |row| {
