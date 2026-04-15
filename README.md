@@ -59,9 +59,16 @@ $ aig why src/auth.py:42
 ## Quick start
 
 ```bash
-# Install
-cargo install --git https://github.com/saschb2b/ai-git.git aig-core
+# Install (Linux / macOS)
+curl -fsSL https://raw.githubusercontent.com/saschb2b/ai-git/main/scripts/install.sh | sh
+```
 
+```powershell
+# Install (Windows)
+irm https://raw.githubusercontent.com/saschb2b/ai-git/main/scripts/install.ps1 | iex
+```
+
+```bash
 # Try it on any existing git repo
 cd your-project
 aig init --import        # initialize + import git history in one step
@@ -111,34 +118,29 @@ git push && aig push
 
 ## Installation
 
-### Pre-built binaries
-
-Download the latest release and extract:
+### One-line install (recommended)
 
 ```bash
-# Linux
-curl -L https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-linux.tar.gz | tar xz
-sudo mv aig /usr/local/bin/
-
-# macOS (Apple Silicon)
-curl -L https://github.com/saschb2b/ai-git/releases/latest/download/aig-aarch64-macos.tar.gz | tar xz
-sudo mv aig /usr/local/bin/
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/saschb2b/ai-git/main/scripts/install.sh | sh
 ```
 
 ```powershell
 # Windows (PowerShell)
-Invoke-WebRequest https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-windows.zip -OutFile aig.zip
-Expand-Archive aig.zip -DestinationPath .
-Move-Item aig.exe "$env:USERPROFILE\.local\bin\aig.exe"
+irm https://raw.githubusercontent.com/saschb2b/ai-git/main/scripts/install.ps1 | iex
 ```
 
-Or browse [all releases](https://github.com/saschb2b/ai-git/releases).
+Auto-detects your platform, downloads the latest release, and adds `aig` to your PATH.
 
 ### From source
 
 ```bash
 cargo install --git https://github.com/saschb2b/ai-git.git aig-core
 ```
+
+### Manual download
+
+Browse [all releases](https://github.com/saschb2b/ai-git/releases) for pre-built binaries (Linux x86_64, macOS aarch64, Windows x86_64).
 
 ### Build locally
 

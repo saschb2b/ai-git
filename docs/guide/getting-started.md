@@ -8,28 +8,19 @@ This guide walks you through installing **aig**, initializing it in a project, a
 
 ## Installation
 
-### Pre-built binaries (fastest)
+### One-line install (recommended)
 
-Download the latest release for your platform:
-
-- [Linux (x86_64)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-linux.tar.gz)
-- [macOS (Apple Silicon)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-aarch64-macos.tar.gz)
-- [Windows (x86_64)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-windows.zip)
-
-**Linux / macOS:**
 ```bash
-tar xzf aig-*.tar.gz
-sudo mv aig /usr/local/bin/
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/saschb2b/ai-git/main/scripts/install.sh | sh
 ```
 
-**Windows (PowerShell):**
 ```powershell
-Expand-Archive aig-x86_64-windows.zip -DestinationPath .
-# Move aig.exe to a directory in your PATH, for example:
-Move-Item aig.exe "$env:USERPROFILE\.local\bin\aig.exe"
-# Or add the current directory to PATH for this session:
-$env:PATH = "$PWD;$env:PATH"
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/saschb2b/ai-git/main/scripts/install.ps1 | iex
 ```
+
+Auto-detects your platform, downloads the latest release, and adds `aig` to your PATH.
 
 ### From source
 
