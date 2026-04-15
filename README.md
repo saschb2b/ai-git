@@ -113,11 +113,24 @@ git push && aig push
 
 ### Pre-built binaries
 
-Download the latest release for your platform:
+Download the latest release and extract:
 
-- [Linux (x86_64)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-linux.tar.gz)
-- [macOS (Apple Silicon)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-aarch64-macos.tar.gz)
-- [Windows (x86_64)](https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-windows.zip)
+```bash
+# Linux
+curl -L https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-linux.tar.gz | tar xz
+sudo mv aig /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -L https://github.com/saschb2b/ai-git/releases/latest/download/aig-aarch64-macos.tar.gz | tar xz
+sudo mv aig /usr/local/bin/
+```
+
+```powershell
+# Windows (PowerShell)
+Invoke-WebRequest https://github.com/saschb2b/ai-git/releases/latest/download/aig-x86_64-windows.zip -OutFile aig.zip
+Expand-Archive aig.zip -DestinationPath .
+Move-Item aig.exe "$env:USERPROFILE\.local\bin\aig.exe"
+```
 
 Or browse [all releases](https://github.com/saschb2b/ai-git/releases).
 
