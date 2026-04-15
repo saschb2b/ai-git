@@ -33,6 +33,7 @@ Commands:
   repair        Repair aig metadata after rebase (re-attaches orphaned notes)
   export        Export all .aig metadata to a portable bundle file
   import-bundle Import .aig metadata from a bundle file
+  hooks         Install or remove git hooks for automatic aig tracking
   trust         Show trust and provenance information for files
   reviewed      Mark a file or intent as human-reviewed
   help          Print this message or the help of the given subcommand(s)
@@ -249,6 +250,29 @@ Options:
       --force  Overwrite existing .aig directory if present
   -h, --help   Print help
 ```
+
+### `aig hooks`
+
+```
+Install or remove git hooks for automatic aig tracking
+
+Usage: aig hooks <COMMAND>
+
+Commands:
+  install  Install git hooks for automatic aig tracking
+  remove   Remove aig git hooks
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help
+```
+
+Installs three hooks:
+- **post-commit** — auto-checkpoint after each commit
+- **post-checkout** — auto-start a session when switching branches
+- **pre-push** — auto-sync aig metadata when pushing
+
+Hooks are safe: they only run if `.aig/` exists, never overwrite existing non-aig hooks, and failures don't block git operations.
 
 ### `aig trust`
 

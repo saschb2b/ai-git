@@ -113,6 +113,11 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
+    /// Install or remove git hooks for automatic aig tracking
+    Hooks {
+        #[command(subcommand)]
+        action: HooksAction,
+    },
     /// Show trust and provenance information for files
     Trust {
         /// File path to inspect (omit for project-wide summary)
@@ -143,6 +148,14 @@ enum ConversationAction {
         /// The message content
         message: String,
     },
+}
+
+#[derive(Subcommand)]
+enum HooksAction {
+    /// Install git hooks for automatic aig tracking
+    Install,
+    /// Remove aig git hooks
+    Remove,
 }
 
 fn main() {
@@ -177,6 +190,10 @@ fn main() {
         Commands::Repair => cmd_repair(),
         Commands::Export { output } => cmd_export(&output),
         Commands::ImportBundle { path, force } => cmd_import_bundle(&path, force),
+        Commands::Hooks { action } => match action {
+            HooksAction::Install => cmd_hooks_install(),
+            HooksAction::Remove => cmd_hooks_remove(),
+        },
         Commands::Trust { file } => cmd_trust(file.as_deref()),
         Commands::Reviewed { target } => cmd_reviewed(&target),
     };
@@ -1126,6 +1143,120 @@ fn cmd_review(intent_id: Option<&str>) -> anyhow::Result<()> {
         }
     }
 
+    Ok(())
+}
+
+// ── Git hooks ───────────────────────────────────────────────────────────
+
+const AIG_HOOK_MARKER: &str = "# aig-managed hook";
+
+fn hook_script(hook_name: &str) -> String {
+    match hook_name {
+        "post-commit" => format!(
+            r#"#!/bin/sh
+{AIG_HOOK_MARKER}
+# Auto-checkpoint after each commit
+if [ -d ".aig" ]; then
+    commit_msg=$(git log -1 --format=%s)
+    commit_sha=$(git rev-parse HEAD)
+    aig checkpoint "$commit_msg" 2>/dev/null || true
+fi
+"#
+        ),
+        "post-checkout" => format!(
+            r#"#!/bin/sh
+{AIG_HOOK_MARKER}
+# Auto-start a session when switching branches
+# $3 is 1 for branch checkout, 0 for file checkout
+if [ "$3" = "1" ] && [ -d ".aig" ]; then
+    branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+    if [ -n "$branch" ]; then
+        aig session end 2>/dev/null || true
+        aig session start "Work on $branch" 2>/dev/null || true
+    fi
+fi
+"#
+        ),
+        "pre-push" => format!(
+            r#"#!/bin/sh
+{AIG_HOOK_MARKER}
+# Sync aig metadata when pushing
+if [ -d ".aig" ]; then
+    remote="$1"
+    aig push "$remote" 2>/dev/null || true
+fi
+"#
+        ),
+        _ => String::new(),
+    }
+}
+
+fn cmd_hooks_install() -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+
+    let hooks_dir = Path::new(".git").join("hooks");
+    if !hooks_dir.exists() {
+        std::fs::create_dir_all(&hooks_dir)?;
+    }
+
+    let hook_names = ["post-commit", "post-checkout", "pre-push"];
+    let mut installed = 0;
+
+    for name in &hook_names {
+        let hook_path = hooks_dir.join(name);
+        let script = hook_script(name);
+
+        if hook_path.exists() {
+            let existing = std::fs::read_to_string(&hook_path)?;
+            if existing.contains(AIG_HOOK_MARKER) {
+                // Already installed, update it
+                std::fs::write(&hook_path, &script)?;
+            } else {
+                println!("  skip: {name} (existing hook found, not overwriting)");
+                continue;
+            }
+        } else {
+            std::fs::write(&hook_path, &script)?;
+        }
+
+        // Make executable on Unix
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&hook_path, std::fs::Permissions::from_mode(0o755))?;
+        }
+
+        println!("  installed: {name}");
+        installed += 1;
+    }
+
+    println!("\n{installed} hook(s) installed.");
+    println!("Hooks will auto-track sessions, checkpoints, and metadata sync.");
+    Ok(())
+}
+
+fn cmd_hooks_remove() -> anyhow::Result<()> {
+    let hooks_dir = Path::new(".git").join("hooks");
+    let hook_names = ["post-commit", "post-checkout", "pre-push"];
+    let mut removed = 0;
+
+    for name in &hook_names {
+        let hook_path = hooks_dir.join(name);
+        if hook_path.exists() {
+            let content = std::fs::read_to_string(&hook_path)?;
+            if content.contains(AIG_HOOK_MARKER) {
+                std::fs::remove_file(&hook_path)?;
+                println!("  removed: {name}");
+                removed += 1;
+            }
+        }
+    }
+
+    if removed == 0 {
+        println!("No aig hooks found to remove.");
+    } else {
+        println!("\n{removed} hook(s) removed.");
+    }
     Ok(())
 }
 
