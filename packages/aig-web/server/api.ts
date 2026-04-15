@@ -19,12 +19,31 @@ function findAigDir(): string {
 }
 
 export function registerApiRoutes(app: Express) {
-  // Walk up from cwd to find .aig directory
   const aigDir = process.env.AIG_DIR ?? findAigDir();
   const db = new AigDatabase(aigDir);
+  const repoDir = path.resolve(aigDir, "..");
 
   app.get("/api/intents", (_req, res) => {
     res.json(db.listIntents());
+  });
+
+  // More specific routes BEFORE the :id catch-all
+  app.get("/api/intents/:id/diff", (req, res) => {
+    const intent = db.getIntent(req.params.id);
+    if (!intent) {
+      res.status(404).json({ error: "Intent not found" });
+      return;
+    }
+
+    const checkpoints = db.getCheckpoints(intent.id);
+    if (checkpoints.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    const shas = checkpoints.map((c) => c.git_commit_sha);
+    const files = getCombinedDiff(repoDir, shas);
+    res.json(files);
   });
 
   app.get("/api/intents/:id", (req, res) => {
@@ -53,27 +72,6 @@ export function registerApiRoutes(app: Express) {
       session,
       filesChanged,
     });
-  });
-
-  // Git repo root: walk up from .aig dir
-  const repoDir = path.resolve(aigDir, "..");
-
-  app.get("/api/intents/:id/diff", (req, res) => {
-    const intent = db.getIntent(req.params.id);
-    if (!intent) {
-      res.status(404).json({ error: "Intent not found" });
-      return;
-    }
-
-    const checkpoints = db.getCheckpoints(intent.id);
-    if (checkpoints.length === 0) {
-      res.json([]);
-      return;
-    }
-
-    const shas = checkpoints.map((c) => c.git_commit_sha);
-    const files = getCombinedDiff(repoDir, shas);
-    res.json(files);
   });
 
   app.get("/api/commits/:sha/diff", (req, res) => {

@@ -285,7 +285,7 @@ export function IntentDetailPage() {
               </Stack>
               <Collapse in={isExpanded}>
                 <Box sx={{ mt: 2 }}>
-                  <CommitDiffViewer sha={cp.git_commit_sha} />
+                  <CommitDiffViewer sha={cp.git_commit_sha} active={expandedCps.has(cp.id)} />
                 </Box>
               </Collapse>
             </Box>
@@ -300,7 +300,7 @@ export function IntentDetailPage() {
 
       {/* Diff tab — combined diff across all checkpoints */}
       <TabPanel value={tab} index={1}>
-        <IntentDiffViewer intentId={intent.id} />
+        <IntentDiffViewer intentId={intent.id} active={tab === 1} />
       </TabPanel>
 
       {/* Conversations tab — searchable, collapsible */}
