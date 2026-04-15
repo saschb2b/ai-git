@@ -7,7 +7,6 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
 import Chip from "@mui/material/Chip";
 import LinearProgress from "@mui/material/LinearProgress";
 import Card from "@mui/material/Card";
@@ -18,10 +17,15 @@ import Link from "@mui/material/Link";
 import Collapse from "@mui/material/Collapse";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SearchIcon from "@mui/icons-material/Search";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import PersonIcon from "@mui/icons-material/Person";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
 import { useState } from "react";
 import { StatusChip } from "../components/StatusChip";
 import { IntentDiffViewer, CommitDiffViewer } from "../components/DiffViewer";
@@ -41,8 +45,7 @@ interface IntentDetail {
     git_commit_sha: string;
     created_at: string;
   }[];
-  semanticChanges: { file_path: string; change_type: string; symbol_name: string }[];
-  changesByCheckpoint: Record<string, unknown[]>;
+  semanticChanges: unknown[];
   conversations: {
     id: string;
     message: string;
@@ -58,7 +61,6 @@ interface IntentDetail {
   session: { started_at: string; ended_at: string | null } | null;
   filesChanged: number;
 }
-
 
 const GITHUB_REPO = "https://github.com/saschb2b/ai-git";
 
@@ -87,9 +89,87 @@ function TabPanel({
   return <Box sx={{ py: 2 }}>{children}</Box>;
 }
 
+/** Guess if a conversation message is from a human or AI based on content heuristics */
+function guessRole(message: string): "human" | "assistant" {
+  // Claude Code captures typically alternate, but we can heuristic:
+  // - Short messages, questions, commands → human
+  // - Long messages with code blocks, explanations → assistant
+  if (message.length < 200 && !message.includes("```") && !message.includes("function ") && !message.includes("import ")) {
+    return "human";
+  }
+  return "assistant";
+}
+
+function ConversationMessage({
+  message,
+  timestamp,
+}: {
+  message: string;
+  timestamp: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const role = guessRole(message);
+  const isLong = message.length > 500;
+  const displayText = isLong && !expanded ? message.slice(0, 400) + "..." : message;
+
+  return (
+    <ListItem
+      sx={{
+        alignItems: "flex-start",
+        px: { xs: 1, sm: 2 },
+        py: 1,
+        borderBottom: "1px solid rgba(255,255,255,0.04)",
+        bgcolor: role === "human" ? "rgba(100, 108, 255, 0.03)" : "transparent",
+      }}
+    >
+      <Box sx={{ mr: 1.5, mt: 0.5, color: role === "human" ? "#646cff" : "#8b949e" }}>
+        {role === "human" ? <PersonIcon sx={{ fontSize: 18 }} /> : <SmartToyIcon sx={{ fontSize: 18 }} />}
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.3 }}>
+          <Typography fontSize="0.72rem" fontWeight={600} color={role === "human" ? "primary.main" : "text.secondary"}>
+            {role === "human" ? "You" : "Assistant"}
+          </Typography>
+          <Typography fontSize="0.68rem" color="text.disabled">
+            {new Date(timestamp).toLocaleTimeString()}
+          </Typography>
+        </Stack>
+        <Typography
+          fontSize="0.82rem"
+          sx={{
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            color: "text.primary",
+            "& code": {
+              bgcolor: "rgba(100,108,255,0.08)",
+              px: 0.5,
+              borderRadius: "3px",
+              fontSize: "0.78rem",
+              fontFamily: "monospace",
+            },
+          }}
+        >
+          {displayText}
+        </Typography>
+        {isLong && (
+          <Typography
+            component="span"
+            fontSize="0.75rem"
+            color="primary.main"
+            sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? "Show less" : "Show more"}
+          </Typography>
+        )}
+      </Box>
+    </ListItem>
+  );
+}
+
 export function IntentDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data, loading, error } = useApi<IntentDetail>(`/api/intents/${id}`);
+  const { data, loading, error, refetch } = useApi<IntentDetail>(`/api/intents/${id}`);
   const [tab, setTab] = useState(0);
   const [expandedCps, setExpandedCps] = useState<Set<string>>(new Set());
   const [convSearch, setConvSearch] = useState("");
@@ -109,12 +189,12 @@ export function IntentDetailPage() {
 
   const {
     intent,
-    checkpoints,
-    semanticChanges,
-    conversations,
-    provenance,
+    checkpoints = [],
+    semanticChanges = [],
+    conversations = [],
+    provenance = [],
     session,
-    filesChanged,
+    filesChanged = 0,
   } = data;
 
   const toggleCp = (cpId: string) => {
@@ -130,8 +210,7 @@ export function IntentDetailPage() {
   const humanCount = provenance.filter((p) => p.origin === "human").length;
   const aiCount = provenance.filter((p) => p.origin !== "human").length;
   const reviewedCount = provenance.filter((p) => p.reviewed).length;
-  const reviewPct =
-    provenance.length > 0 ? (reviewedCount / provenance.length) * 100 : 0;
+  const reviewPct = provenance.length > 0 ? (reviewedCount / provenance.length) * 100 : 0;
 
   // Duration
   const duration = session
@@ -142,104 +221,115 @@ export function IntentDetailPage() {
 
   // Filter conversations
   const filteredConvs = convSearch
-    ? conversations.filter((c) =>
-        c.message.toLowerCase().includes(convSearch.toLowerCase()),
-      )
+    ? conversations.filter((c) => c.message.toLowerCase().includes(convSearch.toLowerCase()))
     : conversations;
 
   return (
     <>
-      {/* Breadcrumb */}
-      <Breadcrumbs sx={{ mb: 2 }}>
-        <Link
-          component="button"
-          underline="hover"
-          color="text.secondary"
-          onClick={() => navigate("/")}
-          sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-        >
-          <ArrowBackIcon fontSize="small" />
-          Intents
-        </Link>
-        <Typography color="text.primary" fontSize="0.875rem">
-          {intent.description.length > 50
-            ? intent.description.slice(0, 50) + "..."
-            : intent.description}
-        </Typography>
-      </Breadcrumbs>
+      {/* Breadcrumb + refresh */}
+      <Stack direction="row" alignItems="center" sx={{ mb: 2 }}>
+        <Breadcrumbs sx={{ flex: 1 }}>
+          <Link
+            component="button"
+            underline="hover"
+            color="text.secondary"
+            onClick={() => navigate("/")}
+            sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+          >
+            <ArrowBackIcon fontSize="small" />
+            Intents
+          </Link>
+          <Typography color="text.primary" fontSize="0.875rem" noWrap sx={{ maxWidth: { xs: 200, sm: 400 } }}>
+            {intent.description.length > 50
+              ? intent.description.slice(0, 50) + "..."
+              : intent.description}
+          </Typography>
+        </Breadcrumbs>
+        <Tooltip title="Refresh data">
+          <IconButton size="small" onClick={refetch} sx={{ color: "text.secondary" }}>
+            <RefreshIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
 
       {/* Header */}
       <Box sx={{ mb: 3 }}>
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-          <Typography variant="h5">{intent.description}</Typography>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }} sx={{ mb: 1 }}>
+          <Typography variant="h5" sx={{ fontSize: { xs: "1.2rem", sm: "1.5rem" } }}>
+            {intent.description}
+          </Typography>
           <StatusChip closed={intent.closed_at !== null} />
         </Stack>
         {intent.summary && (
-          <Typography
-            variant="body2"
-            sx={{ mt: 1, color: "text.secondary", maxWidth: 800 }}
-          >
+          <Typography variant="body2" sx={{ mt: 1, color: "text.secondary", maxWidth: 800 }}>
             {intent.summary}
           </Typography>
         )}
       </Box>
 
-      {/* Stat cards */}
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }} flexWrap="wrap" useFlexGap>
-        <Card sx={{ minWidth: 120 }}>
+      {/* Stat cards — responsive grid */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "repeat(2, 1fr)",
+            sm: "repeat(3, 1fr)",
+            md: "repeat(auto-fit, minmax(120px, 1fr))",
+          },
+          gap: 1.5,
+          mb: 3,
+        }}
+      >
+        <Card>
           <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-            <Typography color="text.secondary" variant="caption">
-              Checkpoints
-            </Typography>
+            <Typography color="text.secondary" variant="caption">Checkpoints</Typography>
             <Typography variant="h5">{checkpoints.length}</Typography>
           </CardContent>
         </Card>
-        <Card sx={{ minWidth: 120 }}>
+        <Card>
           <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-            <Typography color="text.secondary" variant="caption">
-              Files changed
-            </Typography>
+            <Typography color="text.secondary" variant="caption">Files changed</Typography>
             <Typography variant="h5">{filesChanged}</Typography>
           </CardContent>
         </Card>
-        <Card sx={{ minWidth: 120 }}>
+        <Card>
           <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-            <Typography color="text.secondary" variant="caption">
-              Changes
-            </Typography>
+            <Typography color="text.secondary" variant="caption">Changes</Typography>
             <Typography variant="h5">{semanticChanges.length}</Typography>
           </CardContent>
         </Card>
         {duration && (
-          <Card sx={{ minWidth: 120 }}>
+          <Card>
             <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-              <Typography color="text.secondary" variant="caption">
-                Duration
-              </Typography>
+              <Typography color="text.secondary" variant="caption">Duration</Typography>
               <Typography variant="h5">{duration}</Typography>
             </CardContent>
           </Card>
         )}
         {conversations.length > 0 && (
-          <Card sx={{ minWidth: 120 }}>
+          <Card>
             <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-              <Typography color="text.secondary" variant="caption">
-                Conversations
-              </Typography>
+              <Typography color="text.secondary" variant="caption">Conversations</Typography>
               <Typography variant="h5">{conversations.length}</Typography>
             </CardContent>
           </Card>
         )}
-      </Stack>
+      </Box>
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+      <Tabs
+        value={tab}
+        onChange={(_, v) => setTab(v)}
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{ minHeight: 40, "& .MuiTab-root": { minHeight: 40, py: 0.5, fontSize: "0.85rem" } }}
+      >
         <Tab label="Checkpoints" />
         <Tab label="Diff" />
         <Tab label={`Conversations (${conversations.length})`} />
         <Tab label="Trust" />
       </Tabs>
 
-      {/* Checkpoints tab — with inline git diff */}
+      {/* Checkpoints tab */}
       <TabPanel value={tab} index={0}>
         {checkpoints.map((cp) => {
           const isExpanded = expandedCps.has(cp.id);
@@ -249,14 +339,14 @@ export function IntentDetailPage() {
               sx={{
                 borderLeft: "2px solid",
                 borderColor: "primary.main",
-                pl: 2,
+                pl: { xs: 1.5, sm: 2 },
                 mb: 3,
                 py: 1,
               }}
             >
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body1" fontWeight={500}>
+              <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} spacing={1}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body1" fontWeight={500} sx={{ wordBreak: "break-word" }}>
                     {cp.message}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" fontFamily="monospace">
@@ -280,38 +370,36 @@ export function IntentDetailPage() {
                   onClick={() => toggleCp(cp.id)}
                   onDelete={() => toggleCp(cp.id)}
                   deleteIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                  sx={{ cursor: "pointer" }}
+                  sx={{ cursor: "pointer", alignSelf: { xs: "flex-start", sm: "center" } }}
                 />
               </Stack>
               <Collapse in={isExpanded}>
                 <Box sx={{ mt: 2 }}>
-                  <CommitDiffViewer sha={cp.git_commit_sha} active={expandedCps.has(cp.id)} />
+                  <CommitDiffViewer sha={cp.git_commit_sha} active={isExpanded} />
                 </Box>
               </Collapse>
             </Box>
           );
         })}
         {checkpoints.length === 0 && (
-          <Typography color="text.secondary" sx={{ py: 2 }}>
-            No checkpoints yet.
-          </Typography>
+          <Typography color="text.secondary" sx={{ py: 2 }}>No checkpoints yet.</Typography>
         )}
       </TabPanel>
 
-      {/* Diff tab — combined diff across all checkpoints */}
+      {/* Diff tab */}
       <TabPanel value={tab} index={1}>
         <IntentDiffViewer intentId={intent.id} active={tab === 1} />
       </TabPanel>
 
-      {/* Conversations tab — searchable, collapsible */}
+      {/* Conversations tab — with role icons, collapsible long messages, search */}
       <TabPanel value={tab} index={2}>
-        {conversations.length > 10 && (
+        {conversations.length > 5 && (
           <TextField
             size="small"
             placeholder="Search conversations..."
             value={convSearch}
             onChange={(e) => setConvSearch(e.target.value)}
-            sx={{ mb: 2, width: 300 }}
+            sx={{ mb: 2, width: { xs: "100%", sm: 300 } }}
             slotProps={{
               input: {
                 startAdornment: (
@@ -328,75 +416,51 @@ export function IntentDetailPage() {
             {filteredConvs.length} of {conversations.length} messages
           </Typography>
         )}
-        <List sx={{ maxHeight: 600, overflow: "auto" }}>
+        <List sx={{ maxHeight: "70vh", overflow: "auto", bgcolor: "background.paper", borderRadius: 1, border: "1px solid rgba(255,255,255,0.06)" }}>
           {filteredConvs.map((c) => (
-            <ListItem key={c.id} divider sx={{ alignItems: "flex-start" }}>
-              <ListItemText
-                primary={
-                  <Typography
-                    fontSize="0.85rem"
-                    sx={{
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      maxHeight: 200,
-                      overflow: "hidden",
-                    }}
-                  >
-                    {c.message}
-                  </Typography>
-                }
-                secondary={new Date(c.created_at).toLocaleString()}
-              />
-            </ListItem>
+            <ConversationMessage key={c.id} message={c.message} timestamp={c.created_at} />
           ))}
           {filteredConvs.length === 0 && (
-            <Typography color="text.secondary" sx={{ py: 2 }}>
+            <Typography color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
               {convSearch ? "No matching messages." : "No conversations recorded."}
             </Typography>
           )}
         </List>
       </TabPanel>
 
-      {/* Trust tab */}
+      {/* Trust tab — responsive cards */}
       <TabPanel value={tab} index={3}>
         {provenance.length > 0 ? (
-          <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-            <Card sx={{ flex: 1 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
+              gap: 2,
+              mb: 3,
+            }}
+          >
+            <Card>
               <CardContent>
-                <Typography color="text.secondary" variant="body2">
-                  Human
-                </Typography>
+                <Typography color="text.secondary" variant="body2">Human</Typography>
                 <Typography variant="h4">{humanCount}</Typography>
               </CardContent>
             </Card>
-            <Card sx={{ flex: 1 }}>
+            <Card>
               <CardContent>
-                <Typography color="text.secondary" variant="body2">
-                  AI-assisted
-                </Typography>
+                <Typography color="text.secondary" variant="body2">AI-assisted</Typography>
                 <Typography variant="h4">{aiCount}</Typography>
               </CardContent>
             </Card>
-            <Card sx={{ flex: 1 }}>
+            <Card>
               <CardContent>
-                <Typography color="text.secondary" variant="body2">
-                  Reviewed
-                </Typography>
-                <Typography variant="h4">
-                  {Math.round(reviewPct)}%
-                </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={reviewPct}
-                  sx={{ mt: 1 }}
-                />
+                <Typography color="text.secondary" variant="body2">Reviewed</Typography>
+                <Typography variant="h4">{Math.round(reviewPct)}%</Typography>
+                <LinearProgress variant="determinate" value={reviewPct} sx={{ mt: 1 }} />
               </CardContent>
             </Card>
-          </Stack>
+          </Box>
         ) : (
-          <Typography color="text.secondary" sx={{ py: 2 }}>
-            No provenance data recorded.
-          </Typography>
+          <Typography color="text.secondary" sx={{ py: 2 }}>No provenance data recorded.</Typography>
         )}
       </TabPanel>
     </>
