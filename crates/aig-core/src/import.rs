@@ -167,6 +167,48 @@ impl IpcClient {
 
         Ok(result)
     }
+
+    /// Send a `generate_summary` request and read the response.
+    pub fn generate_summary(&mut self, changes: &[String]) -> Result<String> {
+        let request = serde_json::json!({
+            "command": "generate_summary",
+            "params": {
+                "changes": changes,
+            }
+        });
+
+        let stdin = self
+            .child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("IPC stdin unavailable"))?;
+
+        let mut line = serde_json::to_string(&request)?;
+        line.push('\n');
+        stdin.write_all(line.as_bytes())?;
+        stdin.flush()?;
+
+        let mut response_line = String::new();
+        self.reader.read_line(&mut response_line)?;
+
+        if response_line.is_empty() {
+            anyhow::bail!("IPC process returned empty response");
+        }
+
+        let resp: serde_json::Value = serde_json::from_str(&response_line)?;
+
+        if let Some(err) = resp.get("error").and_then(|v| v.as_str()) {
+            anyhow::bail!("LLM error: {err}");
+        }
+
+        let result = resp
+            .get("result")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        Ok(result)
+    }
 }
 
 impl Drop for IpcClient {

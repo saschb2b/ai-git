@@ -1520,6 +1520,18 @@ fn cmd_reviewed(target: &str) -> anyhow::Result<()> {
 
 // ── Releases & changelog ────────────────────────────────────────────────
 
+fn generate_release_title_heuristic(descriptions: &[String], tag: &str) -> String {
+    match descriptions.len() {
+        0 => tag.to_string(),
+        1 => descriptions[0].clone(),
+        2 => format!("{} and {}", descriptions[0], descriptions[1]),
+        _ => {
+            // Use first intent + count of remaining
+            format!("{} (+{} more)", descriptions[0], descriptions.len() - 1)
+        }
+    }
+}
+
 fn cmd_release(tag: &str, title: Option<&str>) -> anyhow::Result<()> {
     ensure_aig_initialized()?;
     let db = Database::new()?;
@@ -1590,7 +1602,29 @@ fn cmd_release(tag: &str, title: Option<&str>) -> anyhow::Result<()> {
         hex::encode(&hasher.finalize()[..16])
     };
 
-    let display_title = title.unwrap_or(tag);
+    // Generate title: use provided, try LLM, fall back to heuristic
+    let display_title = if let Some(t) = title {
+        t.to_string()
+    } else if intents.is_empty() {
+        tag.to_string()
+    } else {
+        let descriptions: Vec<String> = intents.iter().map(|(_, d)| d.clone()).collect();
+
+        // Try LLM
+        let repo_root = std::env::current_dir()?;
+        let mut ipc = aig_core::import::IpcClient::try_connect(&repo_root.to_string_lossy());
+        if let Some(ref mut client) = ipc {
+            match client.generate_summary(&descriptions) {
+                Ok(summary) if !summary.is_empty() => {
+                    println!("  auto-title: {summary}");
+                    summary
+                }
+                _ => generate_release_title_heuristic(&descriptions, tag),
+            }
+        } else {
+            generate_release_title_heuristic(&descriptions, tag)
+        }
+    };
 
     // Insert release record
     db.conn.execute(
