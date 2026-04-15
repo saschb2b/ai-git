@@ -61,8 +61,8 @@ Semantic diff now supports 11 languages: TypeScript/JavaScript, Python, Rust, Go
 
 *CLI is for power users. Teams need visual tools.*
 
-### TUI review interface
-`aig review` already works in the CLI, showing intent summary, semantic changes, and conversation context. The next step is a terminal UI (React/Ink) that lets you navigate the three layers interactively: intent → semantic → diff. Expand/collapse semantic changes, view conversations inline, approve or flag changes.
+### ~~TUI review interface~~ — Shipped
+`aig review --tui` opens an interactive terminal UI (React/Ink) with a navigable intent list on the left and details on the right — checkpoints, semantic changes, trust/provenance, and conversation notes. Navigate with j/k or arrow keys, q to quit.
 
 ### Web UI
 A locally-served web interface for team-level features:

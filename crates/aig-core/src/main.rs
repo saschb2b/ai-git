@@ -89,6 +89,9 @@ enum Commands {
     Review {
         /// Intent ID (first 8 chars). Omit to review the most recent intent.
         intent_id: Option<String>,
+        /// Open interactive terminal UI
+        #[arg(long)]
+        tui: bool,
     },
     /// Repair aig metadata after rebase (re-attaches orphaned notes)
     Repair,
@@ -160,7 +163,13 @@ fn main() {
         Commands::Capture { source, file } => cmd_capture(&source, file.as_deref()),
         Commands::Push { remote } => cmd_push(&remote),
         Commands::Pull { remote } => cmd_pull(&remote),
-        Commands::Review { intent_id } => cmd_review(intent_id.as_deref()),
+        Commands::Review { intent_id, tui } => {
+            if tui {
+                cmd_review_tui()
+            } else {
+                cmd_review(intent_id.as_deref())
+            }
+        }
         Commands::Repair => cmd_repair(),
         Commands::Export { output } => cmd_export(&output),
         Commands::ImportBundle { path, force } => cmd_import_bundle(&path, force),
@@ -1103,6 +1112,37 @@ fn cmd_review(intent_id: Option<&str>) -> anyhow::Result<()> {
         for msg in &conversations {
             println!("  - {msg}");
         }
+    }
+
+    Ok(())
+}
+
+fn cmd_review_tui() -> anyhow::Result<()> {
+    ensure_aig_initialized()?;
+
+    let repo_root = std::env::current_dir()?;
+    let script = repo_root
+        .join("node_modules")
+        .join("@aig")
+        .join("tui")
+        .join("dist")
+        .join("index.js");
+
+    if !script.exists() {
+        anyhow::bail!(
+            "TUI not installed. Run `pnpm install` in the aig repo to set up @aig/tui."
+        );
+    }
+
+    let aig_dir = repo_root.join(".aig").to_string_lossy().to_string();
+
+    let status = std::process::Command::new("node")
+        .arg(&script)
+        .arg(&aig_dir)
+        .status()?;
+
+    if !status.success() {
+        anyhow::bail!("TUI exited with error");
     }
 
     Ok(())

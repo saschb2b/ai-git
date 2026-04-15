@@ -3,9 +3,13 @@
   "private": true,
   "scripts": {
     "dev:docs": "pnpm --filter @aig/docs dev",
+    "dev:tui": "pnpm --filter @aig/tui dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3"]
   },
   "engines": {
     "node": ">=20",

@@ -3,8 +3,25 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "aig-tui": "dist/index.js"
+  },
   "scripts": {
-    "build": "echo 'TUI: phase 2'",
-    "test": "echo 'TUI: phase 2'"
+    "build": "tsup src/index.tsx --format esm",
+    "dev": "tsup src/index.tsx --format esm --watch",
+    "test": "echo 'ok'"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.9.0",
+    "ink": "^7.0.0",
+    "react": "^19.2.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   }
 }

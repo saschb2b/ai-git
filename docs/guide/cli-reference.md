@@ -29,7 +29,7 @@ Commands:
   capture       Capture AI conversation into the active session
   push          Push aig metadata to remote via git notes
   pull          Pull aig metadata from remote via git notes
-  review        Review an intent — show summary, semantic changes, and conversation
+  review        Review an intent — show summary, semantic changes, and conversation (--tui for interactive)
   repair        Repair aig metadata after rebase (re-attaches orphaned notes)
   export        Export all .aig metadata to a portable bundle file
   import-bundle Import .aig metadata from a bundle file
